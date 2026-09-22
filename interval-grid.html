@@ -391,7 +391,10 @@
   document.getElementById('barsDown').addEventListener('click', function(){ if(bars>1){ bars--; barsCount.textContent=bars; markDirty(); render(); } });
 
   // ---- styles (presets) ----
-  var BUILTIN_STYLES = {
+  // Loaded from styles.json at startup (see loadBuiltinStyles below). This copy is
+  // only the offline fallback for when the page is opened directly as a file://
+  // (fetch of a local file is blocked by the browser) rather than served.
+  var FALLBACK_STYLES = {
     'Simple Triads': {
       tempo:90, key:'C Major', chordProgression:'C – Am – F – G', swing:false, bars:2,
       rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:null
@@ -405,6 +408,7 @@
       rh:"<123>4 1 2 3", lh:"14 F4 14 F4", variationOf:null
     }
   };
+  var BUILTIN_STYLES = FALLBACK_STYLES;
   var customStyles = {};
   var STYLES = {};
   var dirty = false;
@@ -863,9 +867,21 @@
   rhInput.addEventListener('input', function(){ markDirty(); render(); });
   lhInput.addEventListener('input', function(){ markDirty(); render(); });
 
+  // Prefer the version-controlled styles.json (so the built-in library can be edited
+  // and diffed outside this file); fall back to the embedded copy if it can't be
+  // fetched — e.g. this page opened directly as a file:// URL rather than served.
+  function loadBuiltinStyles(){
+    return fetch('styles.json')
+      .then(function(res){ if(!res.ok) throw new Error('styles.json ' + res.status); return res.json(); })
+      .catch(function(){ return FALLBACK_STYLES; });
+  }
+
   loadCustomStyles();
-  rebuildStyleMap();
-  rebuildStyleOptions('Simple Triads');
-  applyStyle('Simple Triads');
+  loadBuiltinStyles().then(function(builtins){
+    BUILTIN_STYLES = builtins;
+    rebuildStyleMap();
+    rebuildStyleOptions('Simple Triads');
+    applyStyle('Simple Triads');
+  });
 })();
 </script>

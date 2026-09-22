@@ -1,0 +1,32 @@
+{
+  "Simple Triads": {
+    "tempo": 90,
+    "key": "C Major",
+    "chordProgression": "C – Am – F – G",
+    "swing": false,
+    "bars": 2,
+    "rh": "<123>4 1 2 3 | 1, 2 3 1",
+    "lh": "14 F4 14 F4 | 12 F2",
+    "variationOf": null
+  },
+  "Swung Feel": {
+    "tempo": 100,
+    "key": "C Major",
+    "chordProgression": "C – F – C – G",
+    "swing": true,
+    "bars": 2,
+    "rh": "<123>4 1 2 3 | 1, 2 3 1",
+    "lh": "14 F4 14 F4 | 12 F2",
+    "variationOf": "Simple Triads"
+  },
+  "Slow Ballad": {
+    "tempo": 66,
+    "key": "C Major",
+    "chordProgression": "C – G – Am – F",
+    "swing": false,
+    "bars": 1,
+    "rh": "<123>4 1 2 3",
+    "lh": "14 F4 14 F4",
+    "variationOf": null
+  }
+}
