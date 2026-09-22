@@ -28,5 +28,65 @@
     "rh": "<123>4 1 2 3",
     "lh": "14 F4 14 F4",
     "variationOf": null
+  },
+  "Dance 1": {
+    "tempo": 100,
+    "key": "C Major",
+    "chordProgression": "Csus2",
+    "swing": false,
+    "bars": 1,
+    "rh": "<123>16 r16 <123> r4 r16 <123> r16 <123> r16 <123> r16 <123> r16",
+    "lh": "116 r16 1'16 r16 1 r 1' r 1 r 1' r 1 r 1' r",
+    "variationOf": null
+  },
+  "Dance 2": {
+    "tempo": 100,
+    "key": "C Major",
+    "chordProgression": "Csus2",
+    "swing": false,
+    "bars": 1,
+    "rh": "r8 <123>16 r8. <123>16 r16 <123> r8. <123>16 1 1 r",
+    "lh": "116 r8. 116 r16 1 r16 1 r8. 116 r8.",
+    "variationOf": "Dance 1"
+  },
+  "Basic 1": {
+    "tempo": 100,
+    "key": "C Major",
+    "chordProgression": "Csus2",
+    "swing": false,
+    "bars": 1,
+    "rh": "<123>16 1 <123> 1 <123> 1 <123> 1 <123> 1 <123> 1 <123> 1 <123> 1",
+    "lh": "116 r4 r8. 116 r4 r8.",
+    "variationOf": null
+  },
+  "Basic 2": {
+    "tempo": 100,
+    "key": "C Major",
+    "chordProgression": "Csus2",
+    "swing": false,
+    "bars": 1,
+    "rh": "116 <23> 2 r 1 <23> 2 r 1 <23> 2 r 1 <23> 2 r",
+    "lh": "116 r4 r8. 116 r4 r8.",
+    "variationOf": "Basic 1"
+  },
+  "Basic 3": {
+    "tempo": 100,
+    "key": "C Major",
+    "chordProgression": "Csus2",
+    "swing": false,
+    "bars": 1,
+    "rh": "<13>16 <23> r r <13> <23> r r <13> <23> r r <13> <23> r r",
+    "lh": "116 r4 r8. 116 r4 r8.",
+    "variationOf": "Basic 1"
+  },
+  "Basic 4": {
+    "tempo": 100,
+    "key": "C Major",
+    "chordProgression": "Csus2",
+    "swing": false,
+    "bars": 1,
+    "rh": "<12>16 <13> <24> r2 r4 r16",
+    "lh": "116 r4 r8. 116 r4 r8.",
+    "variationOf": "Basic 1"
   }
 }
