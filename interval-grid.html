@@ -66,16 +66,6 @@
   .segmented button.active{ background:var(--accent); color:#241a06; }
   .segmented button:not(.active):hover{ background:var(--cell); color:var(--text); }
 
-  .stepper{ display:flex; align-items:center; gap:8px; }
-  .stepper label{ font-family:var(--display); font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  .stepper .ctrl{ display:flex; border:1px solid var(--cell-border-strong); border-radius:8px; overflow:hidden; }
-  .stepper .ctrl button{
-    background:var(--cell); color:var(--text); border:none; width:26px; height:26px;
-    font-family:var(--display); font-weight:700; cursor:pointer; font-size:14px;
-  }
-  .stepper .ctrl button:hover{ background:var(--cell-border-strong); }
-  .stepper .ctrl span{ min-width:22px; text-align:center; font-size:13px; padding-top:1px; }
-
   .style-panel{ display:flex; flex-direction:column; gap:14px; }
   .style-row{ display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
   .field-inline{ display:flex; flex-direction:column; gap:5px; }
@@ -262,16 +252,6 @@
         <button data-swing="on">Swing</button>
       </div>
     </div>
-    <div class="controls-right">
-      <div class="stepper">
-        <label>Bars</label>
-        <div class="ctrl">
-          <button id="barsDown">&minus;</button>
-          <span id="barsCount">2</span>
-          <button id="barsUp">+</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="panel">
@@ -327,7 +307,7 @@
     <div class="legend-section">
       <b>3. Bars</b>
       <ul>
-        <li><code>|</code> is a bar check, same as LilyPond: it ends the current bar and starts the next. Use the <b>Bars</b> stepper to display 1&ndash;4 at once.</li>
+        <li><code>|</code> is a bar check, same as LilyPond: it ends the current bar and starts the next. The number of bars shown is worked out automatically from your notation &mdash; one per completed <code>|</code>, plus whatever's left over after the last one &mdash; there's nothing to set manually.</li>
         <li>If a bar's durations don't add up to a full 4/4 bar, a warning prints under it (<span class="assumption">e.g. "26/32 units"</span>) &mdash; the same idea as LilyPond's barcheck failure message, just phrased in 32nd-note units instead of beats.</li>
       </ul>
     </div>
@@ -374,13 +354,12 @@
   var LH_ROW_ORDER = ['BF','B1'];
 
   var swing = false;
-  var bars = 2;
+  var bars = 1; // recomputed each render() from how many bars the notation actually spans
 
   var rhInput = document.getElementById('rhInput');
   var lhInput = document.getElementById('lhInput');
   var swingToggle = document.getElementById('swingToggle');
   var barsWrap = document.getElementById('barsWrap');
-  var barsCount = document.getElementById('barsCount');
   var rhError = document.getElementById('rhError');
   var lhError = document.getElementById('lhError');
   var styleSelect = document.getElementById('styleSelect');
@@ -401,24 +380,21 @@
     markDirty();
     render();
   });
-  document.getElementById('barsUp').addEventListener('click', function(){ if(bars<4){ bars++; barsCount.textContent=bars; markDirty(); render(); } });
-  document.getElementById('barsDown').addEventListener('click', function(){ if(bars>1){ bars--; barsCount.textContent=bars; markDirty(); render(); } });
-
   // ---- styles (presets) ----
   // Loaded from styles.json at startup (see loadBuiltinStyles below). This copy is
   // only the offline fallback for when the page is opened directly as a file://
   // (fetch of a local file is blocked by the browser) rather than served.
   var FALLBACK_STYLES = {
     'Simple Triads': {
-      tempo:90, key:'C Major', chordProgression:'C – Am – F – G', swing:false, bars:2,
+      tempo:90, key:'C Major', chordProgression:'C – Am – F – G', swing:false,
       rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:null
     },
     'Swung Feel': {
-      tempo:100, key:'C Major', chordProgression:'C – F – C – G', swing:true, bars:2,
+      tempo:100, key:'C Major', chordProgression:'C – F – C – G', swing:true,
       rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:'Simple Triads'
     },
     'Slow Ballad': {
-      tempo:66, key:'C Major', chordProgression:'C – G – Am – F', swing:false, bars:1,
+      tempo:66, key:'C Major', chordProgression:'C – G – Am – F', swing:false,
       rh:"<123>4 1 2 3", lh:"14 F4 14 F4", variationOf:null
     }
   };
@@ -507,8 +483,6 @@
     chordProgInput.value = s.chordProgression || '';
     swing = !!s.swing;
     swingToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', (b.dataset.swing==='on')===swing); });
-    bars = s.bars || 1;
-    barsCount.textContent = bars;
     rhInput.value = s.rh || '';
     lhInput.value = s.lh || '';
     dirty = false;
@@ -532,7 +506,7 @@
       tempo: tempoInput.value ? Number(tempoInput.value) : null,
       key: keySel.value,
       chordProgression: chordProgInput.value,
-      swing: swing, bars: bars,
+      swing: swing,
       rh: rhInput.value, lh: lhInput.value,
       variationOf: variationSelect.value || null
     };
@@ -623,7 +597,7 @@
         if(mC[2]) curDigit = digit;
         var units = unitsFor(digit, mC[3].length, err);
         var notes = inner.map(function(p){ return {row:p.lane.row, pc:p.lane.pc, semi: place1(p.lane, p.marks)}; });
-        if(barIdx < bars) events.push({bar:barIdx, startUnits:cursor, durUnits:units, notes:notes, isRest:false, tie: mC[4]==='~'});
+        events.push({bar:barIdx, startUnits:cursor, durUnits:units, notes:notes, isRest:false, tie: mC[4]==='~'});
         cursor += units;
         return;
       }
@@ -632,7 +606,7 @@
         var digitR = mR[1] ? parseInt(mR[1],10) : curDigit;
         if(mR[1]) curDigit = digitR;
         var unitsR = unitsFor(digitR, mR[2].length, err);
-        if(barIdx < bars) events.push({bar:barIdx, startUnits:cursor, durUnits:unitsR, notes:[], isRest:true, tie:false});
+        events.push({bar:barIdx, startUnits:cursor, durUnits:unitsR, notes:[], isRest:true, tie:false});
         cursor += unitsR;
         return;
       }
@@ -644,7 +618,7 @@
         if(mN[3]) curDigit = digitN;
         var unitsN = unitsFor(digitN, mN[4].length, err);
         var semi = place1(lane, parseMarks(mN[2]));
-        if(barIdx < bars) events.push({bar:barIdx, startUnits:cursor, durUnits:unitsN, notes:[{row:lane.row,pc:lane.pc,semi:semi}], isRest:false, tie: mN[5]==='~'});
+        events.push({bar:barIdx, startUnits:cursor, durUnits:unitsN, notes:[{row:lane.row,pc:lane.pc,semi:semi}], isRest:false, tie: mN[5]==='~'});
         cursor += unitsN;
         return;
       }
@@ -663,7 +637,7 @@
     while(i < tokens.length){
       var tok = tokens[i];
       if(tok === '|'){
-        if(barIdx < bars) finishBar(); else { barIdx++; cursor = 0; }
+        finishBar();
         i++; continue;
       }
       if(tok === '\\tuplet'){
@@ -694,12 +668,10 @@
               if(!laneOne){ err.push('Unknown position "' + mn[1] + '" in tuplet.'); continue; }
               notesOne.push({row:laneOne.row, pc:laneOne.pc, semi: place1(laneOne, parseMarks(mn[2]))});
             }
-            if(barIdx < bars){
-              events.push({
-                bar:barIdx, startUnits: startUnitsAtTuplet + t*(totalUnits/3), durUnits: totalUnits/3,
-                notes:notesOne, isRest:false, tie:false
-              });
-            }
+            events.push({
+              bar:barIdx, startUnits: startUnitsAtTuplet + t*(totalUnits/3), durUnits: totalUnits/3,
+              notes:notesOne, isRest:false, tie:false
+            });
           }
           cursor += totalUnits;
         }
@@ -724,7 +696,7 @@
       placeToken(tok);
       i++;
     }
-    if(cursor > 0 || barIdx < bars) finishBar();
+    if(cursor > 0) finishBar();
     return {events:events, barChecks:barChecks};
   }
 
@@ -866,6 +838,7 @@
     var rErr = [], lErr = [];
     var rh = parseHand(rhInput.value, true, rErr);
     var lh = parseHand(lhInput.value, false, lErr);
+    bars = Math.max(1, rh.barChecks.length, lh.barChecks.length);
     PX = finestUnits(rh, lh) < 4 ? PX_BASE * 2 : PX_BASE;
 
     barsWrap.innerHTML = '';
