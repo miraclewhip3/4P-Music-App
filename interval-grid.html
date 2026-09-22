@@ -160,6 +160,13 @@
       repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 28px),
       repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 14px);
   }
+  /* Doubled scale (any 16th-or-finer duration present) — matches PX_BASE*2 in JS. */
+  .lane-row.scale2{
+    background-image:
+      repeating-linear-gradient(to right, var(--cell-border-strong) 0 1px, transparent 1px 112px),
+      repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 56px),
+      repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 28px);
+  }
   .lane:first-child .lane-row{ border-top:1px solid var(--cell-border-strong); }
   .hand-gap{ height:10px; }
   .bar-divider{ position:absolute; top:0; bottom:0; width:2px; background:var(--muted-dim); opacity:.55; }
@@ -312,6 +319,7 @@
         <li><b>It persists.</b> Once set, later notes reuse it until a new duration is written &mdash; so <code>1 2 3 4</code> after an initial <code>&lt;123&gt;4</code> are all quarters too, with nothing extra to type. This is the single biggest reason LilyPond input is fast to enter, and it works the same way here.</li>
         <li>A trailing <code>.</code> dots the duration (&times;1.5); <code>..</code> double-dots (&times;1.75). <code>4.</code> = dotted quarter.</li>
         <li>Before anything is specified, the default is an eighth note (<code>8</code>).</li>
+        <li>If a 16th note (or anything finer) shows up anywhere in either hand, the whole grid doubles in width &mdash; giving 16ths the same visual room 8ths normally get, instead of squeezing them into half the space. A pattern using only 8ths or coarser stays at the normal width.</li>
         <li>A trailing <code>~</code> ties a note into the next one of the same pitch, shown as a bridge connecting the two blocks.</li>
       </ul>
     </div>
@@ -357,7 +365,8 @@
 <script>
 (function(){
   var BASE = 32; // 32nd-note units per 4/4 bar — fine enough grain for dotted 16ths
-  var PX = 7;    // px per unit
+  var PX_BASE = 7;  // px per unit at normal (8th-note-or-coarser) resolution
+  var PX = PX_BASE; // current px per unit — render() doubles this when 16ths (or finer) appear
   var NATURALS = [[0,'C'],[2,'D'],[4,'E'],[5,'F'],[7,'G'],[9,'A'],[11,'B']];
   var RH_LANES = { '1':{row:'C1',pc:0}, '2':{row:'C2',pc:4}, '3':{row:'C3',pc:7}, '4':{row:'C4',pc:11} };
   var LH_LANES = { '1':{row:'B1',pc:0}, 'F':{row:'BF',pc:7} };
@@ -667,8 +676,7 @@
           err.push('\\tuplet 3/2 { ... } needs exactly 3 notes/chords inside.');
         } else {
           var totalUnits = unitsFor(curDigit, 0, err) * 2;
-          var totalPx = totalUnits * PX;
-          var startPx = cursor * PX;
+          var startUnitsAtTuplet = cursor;
           for(var t=0; t<3; t++){
             var one = blk.block[t];
             var mOne = CHORD_RE.exec(one) || NOTE_RE.exec(one);
@@ -688,8 +696,8 @@
             }
             if(barIdx < bars){
               events.push({
-                bar:barIdx, startUnits:cursor, durUnits: totalUnits/3, notes:notesOne, isRest:false, tie:false,
-                pxOverrideLeft: startPx + t*(totalPx/3), pxOverrideWidth: totalPx/3
+                bar:barIdx, startUnits: startUnitsAtTuplet + t*(totalUnits/3), durUnits: totalUnits/3,
+                notes:notesOne, isRest:false, tie:false
               });
             }
           }
@@ -775,7 +783,7 @@
       label.className = 'lane-label';
       label.textContent = rowId;
       var strip = document.createElement('div');
-      strip.className = 'lane-row';
+      strip.className = 'lane-row' + (PX > PX_BASE ? ' scale2' : '');
       strip.style.width = totalW + 'px';
       for(var i=1;i<bars;i++){
         var divider = document.createElement('div');
@@ -828,8 +836,8 @@
 
   function addBlock(strip, e, note, handClass, isRest, barW){
     if(!strip) return;
-    var left = (e.pxOverrideLeft!==undefined ? e.pxOverrideLeft : e.startUnits*PX) + e.bar*barW;
-    var width = e.pxOverrideWidth!==undefined ? e.pxOverrideWidth : e.durUnits*PX;
+    var left = e.startUnits*PX + e.bar*barW;
+    var width = e.durUnits*PX;
     if(swing && Math.round(e.startUnits) % 8 === 4){ left += 4; }
     var el = document.createElement('div');
     el.className = 'note ' + handClass + (isRest ? ' rest' : '');
@@ -844,10 +852,21 @@
     strip.appendChild(el);
   }
 
+  // The finest duration actually used (in units — 4=8th, 2=16th, 1=32nd, with
+  // dotted values in between) decides the pixel scale: anything finer than an
+  // 8th note doubles the width, so 16ths get the same visual room 8ths normally
+  // have, rather than being squeezed into half the space.
+  function finestUnits(rh, lh){
+    var min = Infinity;
+    rh.events.concat(lh.events).forEach(function(e){ if(e.durUnits < min) min = e.durUnits; });
+    return min;
+  }
+
   function render(){
     var rErr = [], lErr = [];
     var rh = parseHand(rhInput.value, true, rErr);
     var lh = parseHand(lhInput.value, false, lErr);
+    PX = finestUnits(rh, lh) < 4 ? PX_BASE * 2 : PX_BASE;
 
     barsWrap.innerHTML = '';
     var tl = buildTimeline();
