@@ -34,6 +34,6 @@ When editing `rh`/`lh` strings by hand: duration persists after rests too (`r8.`
 
 ## Workflow notes
 
-- Commit + push after each completed change (established pattern in this repo).
+- **Always commit and push after each completed change in this repo** — do this by default, without asking first.
 - `gh` CLI is authenticated as `miraclewhip3`; remote is `https://github.com/miraclewhip3/4P-Music-App` (private). If `git push` fails with "Repository not found" despite `gh auth status` looking fine, run `gh auth setup-git` (stale git credential helper, not a gh auth problem).
 - For parser/grammar changes, verify with a standalone Node test (extract the parsing logic, no DOM) before wiring into the browser — this has caught real bugs (duration-persistence math) that were easy to miss by inspection.
