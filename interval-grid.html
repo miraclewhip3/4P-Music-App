@@ -197,7 +197,7 @@
 <div class="wrap">
   <header>
     <h1>Interval Grid</h1>
-    <div class="sub">A time-based notation for keyboard voicings, modeled on <b>LilyPond</b>'s relative-pitch and duration syntax: write positions in the order they sound, and the grid lays itself out from how long each one lasts.</div>
+    <div class="sub">A time-based notation for keyboard voicings, modeled on <b>LilyPond</b>'s duration syntax (though not its automatic octave-picking): write positions in the order they sound, and the grid lays itself out from how long each one lasts.</div>
   </header>
 
   <div class="panel style-panel">
@@ -320,14 +320,12 @@
     </div>
 
     <div class="legend-section">
-      <b>4. Relative pitch &mdash; this is the LilyPond part</b>
+      <b>4. Octaves &mdash; deliberately <i>not</i> LilyPond here</b>
       <ul>
-        <li>There's no more Absolute/Relative switch: entry is <i>always</i> relative now, the way LilyPond recommends for nearly all real music. A position digit still always picks the same lane (<code>2</code> is always the 3rd) &mdash; relative mode only decides <i>which octave</i> that lane sounds in, exactly like LilyPond only ever adjusts octave, never which letter you meant.</li>
-        <li>The rule, straight from LilyPond: each new note is placed in whichever octave is <b>closest</b> to the previous note. Most of the time that's the natural, expected voicing, so you never have to think about octaves at all.</li>
-        <li><code>'</code> pushes a note one octave <i>higher</i> than that automatic placement; <code>,</code> pushes it one octave <i>lower</i>. Stack them for more (<code>''</code> = two octaves up). Attach marks directly to a position, before the duration: <code>1'8</code>.</li>
-        <li>Inside a chord, each position can carry its own marks, and each one is placed relative to the position <i>before it in the same chord</i> &mdash; <code>&lt;12'3&gt;</code> voices the 3rd an octave higher than the root, with the 5th then falling closest to <i>that</i>. What comes after the chord continues relative to its <b>last</b> note, not its first &mdash; also straight out of LilyPond.</li>
-        <li>Each hand tracks its own running reference across the whole part (bar lines don't reset it), starting from the root at rule-of-thumb octave 0.</li>
-        <li><span class="assumption">Known LilyPond-style quirk:</span> because every chord here is always spelled low-lane-to-high-lane, the register can quietly climb (or, with LH's root/fifth, sit a fifth low rather than a fourth high) over several bars. If a passage drifts further than you want, drop in a <code>,</code> to pull it back &mdash; this is the same "remember your octave" caution LilyPond's own docs give, not a bug.</li>
+        <li>There's no more Absolute/Relative switch: a position digit always picks the same lane (<code>2</code> is always the 3rd) and always sounds at that lane's own fixed default octave &mdash; <b>never</b> shifted automatically by whatever played before it.</li>
+        <li>This is a deliberate break from LilyPond, which auto-picks the closest octave to the previous note. Here, no marks means the plain, unmoved lane pitch every time &mdash; fully predictable, and never something to double-check.</li>
+        <li><code>'</code> shifts a note one octave <i>higher</i> than its lane's default; <code>,</code> shifts it one octave <i>lower</i>. Stack them for more (<code>''</code> = two octaves up). Attach marks directly to a position, before the duration: <code>1'8</code>. A mark is always measured from that fixed default, not from the previous note, so the same token always produces the same octave no matter what comes before it.</li>
+        <li>Inside a chord, each position carries its own marks independently &mdash; <code>&lt;12'3&gt;</code> is root at its default octave, 3rd shifted up one, 5th at its default. Nothing about one note in a chord affects another's octave.</li>
         <li>Hover any block to see its resolved note name (at most one sharp/flat, spelled from whichever natural letter is closest).</li>
       </ul>
     </div>
@@ -557,14 +555,11 @@
     return n;
   }
 
-  // LilyPond's relative-octave rule: each new pitch is placed in the octave
-  // nearest the reference, then explicit '/, marks add whole extra octaves.
-  function place(lane, marks, refState){
-    var ref = refState.value;
-    var k = Math.round((ref - lane.pc) / 12);
-    var semi = lane.pc + 12*k + 12*marks;
-    refState.value = semi;
-    return semi;
+  // No automatic octave placement: a plain position always sounds at its lane's
+  // own default octave. Explicit '/, marks shift it from that fixed default —
+  // never from whatever note happened to come before (unlike LilyPond).
+  function place(lane, marks){
+    return lane.pc + 12*marks;
   }
 
   function parseChordInner(raw, lanes, isRH, err){
@@ -586,15 +581,13 @@
     return out;
   }
 
-  // Single pass over one hand's whole token stream (all bars). Duration and the
-  // relative-pitch reference persist across bar lines, exactly as in LilyPond —
-  // only the bar check resets per bar.
+  // Single pass over one hand's whole token stream (all bars). Duration persists
+  // across bar lines, exactly as in LilyPond — only the bar check resets per bar.
   function parseHand(str, isRH, err){
     var lanes = isRH ? RH_LANES : LH_LANES;
     var tokens = tokenize(str);
     var events = [];      // {bar, startUnits, durUnits, notes:[{row,semi}], isRest, tie}
     var barChecks = [];   // {bar, actual}
-    var refState = {value:0};
     var curDigit = 8;
     var cursor = 0, barIdx = 0;
 
@@ -602,7 +595,7 @@
       barChecks.push({bar:barIdx, actual:cursor});
       barIdx++; cursor = 0;
     }
-    function place1(lane, marks){ return place(lane, marks, refState); }
+    function place1(lane, marks){ return place(lane, marks); }
 
     function placeToken(raw){
       var mC = CHORD_RE.exec(raw);
