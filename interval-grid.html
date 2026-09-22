@@ -19,6 +19,10 @@
     background: var(--bg);
   }
   *{box-sizing:border-box;}
+  /* Enforced explicitly: outside the claude.ai artifact sandbox (which used to add
+     this for free) an element's own `display` rule can outrank the browser's default
+     [hidden]{display:none}, since both are equal specificity and author CSS wins ties. */
+  [hidden]{ display:none !important; }
   body{
     background: var(--bg);
     color: var(--text);
