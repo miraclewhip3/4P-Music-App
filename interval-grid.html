@@ -338,7 +338,7 @@
     <div class="legend-section">
       <b>5. Repeats and tuplets</b> &mdash; borrowed from LilyPond's own <code>\repeat</code> and <code>\tuplet</code>
       <ul>
-        <li><code>\repeat unfold N { token }</code> &mdash; plays that one note/chord token <code>N</code> times in a row, each computed normally through the relative-pitch chain (so repeating the same position just holds still, as expected).</li>
+        <li><code>\repeat N { tokens }</code> &mdash; plays everything inside the braces (one token or a whole phrase of them) <code>N</code> times in a row, exactly as if you'd typed it out that many times &mdash; duration keeps persisting across each repetition, same as anywhere else. <span class="assumption">Simplified from LilyPond's <code>\repeat unfold N {…}</code>: this tool only has one kind of repeat, so there's nothing for the <code>unfold</code> keyword to disambiguate.</span></li>
         <li><code>\tuplet 3/2 { a b c }</code> &mdash; a triplet: fits exactly three positions into the time of two of the currently-persisting duration (e.g. three notes in the space of two 8ths = one beat). Only 3-against-2 is supported.</li>
         <li><span class="assumption">Dropped from the previous version:</span> the old <code>\arp</code> command is gone &mdash; duration persistence already makes writing an arpeggio as plain sequential notes just as short (<code>&lt;123&gt;8 1 2 3</code>), so a separate command added nothing.</li>
       </ul>
@@ -698,16 +698,18 @@
         i = blk.next; continue;
       }
       if(tok === '\\repeat'){
-        if(tokens[i+1] !== 'unfold' || !/^\d+$/.test(tokens[i+2]) || tokens[i+3] !== '{'){
-          err.push('\\repeat must be written as \\repeat unfold N { token }.');
+        if(!/^\d+$/.test(tokens[i+1]) || tokens[i+2] !== '{'){
+          err.push('\\repeat must be written as \\repeat N { tokens }.');
           i++; continue;
         }
-        var count = parseInt(tokens[i+2],10);
-        var blk2 = consumeBlock(tokens, i+3);
-        if(blk2.block.length !== 1){
-          err.push('\\repeat unfold N { ... } needs exactly one note/chord/rest inside.');
+        var count = parseInt(tokens[i+1],10);
+        var blk2 = consumeBlock(tokens, i+2);
+        if(!blk2.block.length){
+          err.push('\\repeat N { ... } needs at least one note/chord/rest inside.');
         } else {
-          for(var r=0;r<count;r++) placeToken(blk2.block[0]);
+          for(var r=0;r<count;r++){
+            blk2.block.forEach(function(t){ placeToken(t); });
+          }
         }
         i = blk2.next; continue;
       }
