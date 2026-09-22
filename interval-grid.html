@@ -1,0 +1,878 @@
+<title>Interval Grid</title>
+<style>
+  :root{
+    --bg:#181d16;
+    --panel:#212a1d;
+    --panel-border:#333f2b;
+    --cell:#2b3626;
+    --cell-border:#3a4732;
+    --cell-border-strong:#4c5c41;
+    --text:#eae6d9;
+    --muted:#98a38d;
+    --muted-dim:#6f7a66;
+    --rh:#d67a63;
+    --lh:#7f9ed9;
+    --accent:#c9a13a;
+    --warn:#e0917f;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+    --display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+  }
+  *{box-sizing:border-box;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    padding: 28px 16px 40px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+  }
+  .wrap{ width:100%; max-width:960px; display:flex; flex-direction:column; gap:22px; }
+
+  header{ display:flex; flex-direction:column; gap:4px; }
+  h1{
+    font-family: var(--display);
+    font-size: clamp(24px, 4vw, 32px);
+    font-weight:600;
+    margin:0;
+    letter-spacing:-0.01em;
+    text-wrap: balance;
+  }
+  .sub{ color:var(--muted); font-size:13.5px; line-height:1.5; max-width:66ch; }
+  .sub b{ color:var(--text); font-weight:600; }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:18px 20px;
+  }
+
+  .controls{ display:flex; gap:16px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+  .controls-left, .controls-right{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .segmented{ display:flex; border:1px solid var(--cell-border-strong); border-radius:8px; overflow:hidden; }
+  .segmented button{
+    font-family:var(--display); font-size:12.5px; font-weight:600;
+    letter-spacing:.02em; text-transform:uppercase;
+    background:transparent; color:var(--muted); border:none;
+    padding:8px 14px; cursor:pointer; transition:background .15s,color .15s;
+  }
+  .segmented button.active{ background:var(--accent); color:#241a06; }
+  .segmented button:not(.active):hover{ background:var(--cell); color:var(--text); }
+
+  .stepper{ display:flex; align-items:center; gap:8px; }
+  .stepper label{ font-family:var(--display); font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stepper .ctrl{ display:flex; border:1px solid var(--cell-border-strong); border-radius:8px; overflow:hidden; }
+  .stepper .ctrl button{
+    background:var(--cell); color:var(--text); border:none; width:26px; height:26px;
+    font-family:var(--display); font-weight:700; cursor:pointer; font-size:14px;
+  }
+  .stepper .ctrl button:hover{ background:var(--cell-border-strong); }
+  .stepper .ctrl span{ min-width:22px; text-align:center; font-size:13px; padding-top:1px; }
+
+  .style-panel{ display:flex; flex-direction:column; gap:14px; }
+  .style-row{ display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
+  .field-inline{ display:flex; flex-direction:column; gap:5px; }
+  .field-inline label{
+    font-family:var(--display); font-size:11.5px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .field-inline select, .field-inline input[type="text"], .field-inline input[type="number"]{
+    font-family:var(--mono); font-size:13px; background:var(--cell); color:var(--text);
+    border:1px solid var(--cell-border-strong); border-radius:6px; padding:7px 9px;
+  }
+  .field-inline select:focus, .field-inline input:focus{ outline:2px solid var(--accent); outline-offset:-1px; }
+  .field-inline input[type="number"]{ width:90px; }
+  .field-row{ display:flex; align-items:center; gap:7px; }
+  .unit{ font-size:11.5px; color:var(--muted-dim); }
+  .style-name-field{ flex-direction:row; align-items:center; gap:10px; }
+  .style-name-field label{ margin:0; }
+  .style-name-field select{ min-width:200px; }
+  .style-name-input{ min-width:170px; }
+  .chord-prog-field{ flex:1; min-width:220px; }
+  .chord-prog-field input{ width:100%; }
+  .save-btn{
+    font-family:var(--display); font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.03em;
+    background:var(--accent); color:#241a06; border:none; border-radius:6px; padding:8px 16px; cursor:pointer;
+  }
+  .save-btn:hover{ filter:brightness(1.08); }
+
+  .variations-list{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-top:-4px; }
+  .variations-label{
+    font-family:var(--display); font-size:11px; font-weight:600; color:var(--muted-dim);
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  #variationsChips{ display:flex; gap:7px; flex-wrap:wrap; }
+  .variation-chip{
+    font-family:var(--mono); font-size:12px; background:var(--cell); color:var(--text);
+    border:1px solid var(--cell-border-strong); border-radius:14px; padding:3px 11px; cursor:pointer;
+  }
+  .variation-chip:hover{ background:var(--cell-border-strong); }
+
+  .inputs{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:600px){ .inputs{ grid-template-columns:1fr; } }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field .tag{ display:flex; align-items:center; gap:7px; font-family:var(--display); font-size:12.5px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; }
+  .dot{ width:9px; height:9px; border-radius:50%; }
+  .dot.rh{ background:var(--rh); }
+  .dot.lh{ background:var(--lh); }
+  .field textarea{
+    width:100%; resize:none; height:56px;
+    background:var(--cell); color:var(--text);
+    border:1px solid var(--cell-border-strong); border-radius:8px;
+    padding:10px 12px; font-family:var(--mono); font-size:14px; line-height:1.4;
+  }
+  .field textarea:focus{ outline:2px solid var(--accent); outline-offset:-1px; }
+  .field .hint{ color:var(--muted-dim); font-size:11.5px; }
+  .parse-error{ color:var(--warn); font-size:11.5px; display:none; }
+  .parse-error.show{ display:block; }
+
+  .grid-panel{ overflow-x:auto; }
+  .grid-title{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+  .grid-title .name{ font-family:var(--display); font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .grid-title .hint2{ font-family:var(--mono); font-size:11.5px; color:var(--muted-dim); }
+
+  .bars{ display:flex; flex-direction:column; gap:20px; }
+  .bar-block{ display:flex; flex-direction:column; gap:2px; align-items:flex-start; }
+
+  .beat-header{ display:flex; }
+  .beat-header .spacer{ width:56px; flex:none; }
+  .beat-header .ruler{ position:relative; height:16px; }
+  .beat-header .beat-num{ position:absolute; top:0; font-family:var(--display); font-size:11px; font-weight:600; color:var(--muted); transform:translateX(-50%); }
+
+  .hand-group{ display:flex; flex-direction:column; }
+  .lane{ display:flex; }
+  .lane-label{
+    width:56px; flex:none; font-family:var(--display); font-size:12px; font-weight:600;
+    color:var(--muted); display:flex; align-items:center; justify-content:flex-end; padding-right:10px;
+  }
+  .lane-row{
+    position:relative; height:40px; background:var(--cell);
+    border-bottom:1px solid var(--cell-border);
+    background-image:
+      repeating-linear-gradient(to right, var(--cell-border-strong) 0 1px, transparent 1px 56px),
+      repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 28px);
+  }
+  .lane:first-child .lane-row{ border-top:1px solid var(--cell-border-strong); }
+  .hand-gap{ height:10px; }
+  .bar-divider{ position:absolute; top:0; bottom:0; width:2px; background:var(--muted-dim); opacity:.55; }
+
+  .note{
+    position:absolute; top:50%; transform:translateY(-50%);
+    border-radius:6px; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:800; font-size:11px;
+  }
+  .note.rh{ background:var(--rh); color:#2a1712; }
+  .note.lh{ background:var(--lh); color:#111a2e; }
+  .note.rest{ background:transparent; border:1.5px dashed var(--muted-dim); }
+  .tie-bridge{ position:absolute; top:50%; transform:translateY(-50%); height:58%; }
+  .tie-bridge.rh{ background:var(--rh); }
+  .tie-bridge.lh{ background:var(--lh); }
+
+  .bar-check{ font-family:var(--mono); font-size:11px; color:var(--warn); margin-top:3px; }
+
+  .legend{ display:flex; flex-direction:column; gap:16px; }
+  .legend .name{ font-family:var(--display); font-size:12.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .legend-section{ font-size:13px; color:var(--muted); line-height:1.6; border-top:1px solid var(--panel-border); padding-top:14px; }
+  .legend-section:first-of-type{ border-top:none; padding-top:0; }
+  .legend-section > b{ display:block; color:var(--text); font-family:var(--display); font-size:13px; margin-bottom:6px; }
+  .legend-section code{ background:var(--cell); border:1px solid var(--cell-border); border-radius:4px; padding:1px 5px; color:var(--text); font-size:12.5px; }
+  .legend-section ul{ margin:6px 0 0; padding-left:20px; display:flex; flex-direction:column; gap:5px; }
+  .legend-section ul li::marker{ color:var(--muted-dim); }
+  .legend-section .note-swatch{
+    display:inline-flex; align-items:center; justify-content:center; width:22px; height:16px;
+    border-radius:4px; vertical-align:middle; margin:0 3px; font-size:9px; font-weight:800; position:relative;
+  }
+  .legend-section .note-swatch.rh{ background:var(--rh); color:#2a1712; }
+  .legend-section .note-swatch.lh{ background:var(--lh); color:#111a2e; }
+  .lane-table{ margin-top:8px; border-collapse:collapse; font-size:12.5px; }
+  .lane-table th{ text-align:left; color:var(--text); font-family:var(--display); font-weight:600; padding:4px 14px 4px 0; white-space:nowrap; }
+  .lane-table td{ padding:4px 14px 4px 0; white-space:nowrap; }
+  .assumption{ color:var(--accent); }
+  .lp{ color:var(--muted-dim); font-style:italic; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Interval Grid</h1>
+    <div class="sub">A time-based notation for keyboard voicings, modeled on <b>LilyPond</b>'s relative-pitch and duration syntax: write positions in the order they sound, and the grid lays itself out from how long each one lasts.</div>
+  </header>
+
+  <div class="panel style-panel">
+    <div class="style-row style-name-row">
+      <div class="field-inline style-name-field">
+        <label for="styleSelect">Style Name</label>
+        <select id="styleSelect"></select>
+        <input type="text" id="styleNameInput" class="style-name-input" placeholder="Name this style" hidden>
+        <button id="saveStyleBtn" class="save-btn" hidden>Save</button>
+      </div>
+    </div>
+    <div class="style-row">
+      <div class="field-inline">
+        <label for="variationSelect">Variation of Style</label>
+        <select id="variationSelect">
+          <option value="">None (base style)</option>
+        </select>
+      </div>
+    </div>
+    <div class="variations-list" id="variationsList" hidden>
+      <span class="variations-label">Variations</span>
+      <span id="variationsChips"></span>
+    </div>
+    <div class="style-row">
+      <div class="field-inline">
+        <label for="tempoInput">Tempo</label>
+        <div class="field-row">
+          <input type="number" id="tempoInput" placeholder="e.g. 120" min="20" max="300">
+          <span class="unit">BPM</span>
+        </div>
+      </div>
+      <div class="field-inline">
+        <label for="keySel">Key</label>
+        <select id="keySel">
+          <option value="C Major">C Major</option>
+        </select>
+      </div>
+      <div class="field-inline chord-prog-field">
+        <label for="chordProgInput">Chord Progression</label>
+        <input type="text" id="chordProgInput" placeholder="e.g. C – Am – F – G">
+      </div>
+    </div>
+    <div class="hint">Tempo, key, and chord progression are optional and descriptive &mdash; only key currently affects the grid. Pick a <b>Style Name</b> to load a full preset (tempo, key, progression, swing, bars, and both hands); change anything here or below and it becomes <b>Custom</b>, ready to save as your own.</div>
+  </div>
+
+  <div class="panel controls">
+    <div class="controls-left">
+      <div class="segmented" id="swingToggle">
+        <button data-swing="off" class="active">Straight</button>
+        <button data-swing="on">Swing</button>
+      </div>
+    </div>
+    <div class="controls-right">
+      <div class="stepper">
+        <label>Bars</label>
+        <div class="ctrl">
+          <button id="barsDown">&minus;</button>
+          <span id="barsCount">2</span>
+          <button id="barsUp">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="inputs">
+      <div class="field">
+        <div class="tag"><span class="dot rh"></span>Right Hand</div>
+        <textarea id="rhInput" spellcheck="false"></textarea>
+        <div class="hint">e.g. <code>&lt;123&gt;4 1'8 1'8</code> &middot; duration persists till you change it &middot; bars separated by <code>|</code></div>
+        <div class="parse-error" id="rhError"></div>
+      </div>
+      <div class="field">
+        <div class="tag"><span class="dot lh"></span>Left Hand</div>
+        <textarea id="lhInput" spellcheck="false"></textarea>
+        <div class="hint">e.g. <code>1,4 F4</code> &middot; positions are <code>1</code>=root, <code>F</code>=fifth</div>
+        <div class="parse-error" id="lhError"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel grid-panel">
+    <div class="grid-title">
+      <span class="name">Grid</span>
+      <span class="hint2" id="rootReadout">relative-pitch mode &mdash; see notation key, rule 4</span>
+    </div>
+    <div class="bars" id="barsWrap"></div>
+  </div>
+
+  <div class="panel legend">
+    <div class="name">Notation key <span class="lp">&mdash; adapted from LilyPond's input language</span></div>
+
+    <div class="legend-section">
+      <b>1. Notes are a sequence in time, not a grid address</b>
+      <ul>
+        <li>There's no more beat number to type. Write positions in the order they happen; each one's <b>duration</b> (rule 2) tells the grid how far to advance before the next one starts &mdash; exactly like LilyPond's note input (<code>c4 d e</code>, not "beat 1, beat 2&hellip;").</li>
+        <li>A single note is one position character: RH uses <code>1</code>&ndash;<code>4</code> for lanes <code>C1</code>&ndash;<code>C4</code> (root, 3rd, 5th, 7th); LH uses <code>1</code> (root/<code>B1</code>) or <code>F</code> (fifth/<code>BF</code>).</li>
+        <li>A chord is the position characters wrapped in <code>&lt;&gt;</code>, e.g. <code>&lt;123&gt;</code> = root+3rd+5th together &mdash; the same <code>&lt;&gt;</code> LilyPond uses for simultaneous notes. A bracket is required for more than one note at once; without it, digits would be impossible to tell apart from a duration number.</li>
+        <li><code>r</code> is a rest &mdash; silence for its duration, needed now that nothing else advances the clock for you.</li>
+      </ul>
+    </div>
+
+    <div class="legend-section">
+      <b>2. Duration</b> &mdash; a number right after the position/chord, LilyPond-style
+      <ul>
+        <li><code>1</code>=whole, <code>2</code>=half, <code>4</code>=quarter, <code>8</code>=eighth, <code>16</code>=sixteenth, <code>32</code>=thirty-second &mdash; each is "1 divided by the number," so <code>4</code> is a quarter of a bar.</li>
+        <li><b>It persists.</b> Once set, later notes reuse it until a new duration is written &mdash; so <code>1 2 3 4</code> after an initial <code>&lt;123&gt;4</code> are all quarters too, with nothing extra to type. This is the single biggest reason LilyPond input is fast to enter, and it works the same way here.</li>
+        <li>A trailing <code>.</code> dots the duration (&times;1.5); <code>..</code> double-dots (&times;1.75). <code>4.</code> = dotted quarter.</li>
+        <li>Before anything is specified, the default is an eighth note (<code>8</code>).</li>
+        <li>A trailing <code>~</code> ties a note into the next one of the same pitch, shown as a bridge connecting the two blocks.</li>
+      </ul>
+    </div>
+
+    <div class="legend-section">
+      <b>3. Bars</b>
+      <ul>
+        <li><code>|</code> is a bar check, same as LilyPond: it ends the current bar and starts the next. Use the <b>Bars</b> stepper to display 1&ndash;4 at once.</li>
+        <li>If a bar's durations don't add up to a full 4/4 bar, a warning prints under it (<span class="assumption">e.g. "26/32 units"</span>) &mdash; the same idea as LilyPond's barcheck failure message, just phrased in 32nd-note units instead of beats.</li>
+      </ul>
+    </div>
+
+    <div class="legend-section">
+      <b>4. Relative pitch &mdash; this is the LilyPond part</b>
+      <ul>
+        <li>There's no more Absolute/Relative switch: entry is <i>always</i> relative now, the way LilyPond recommends for nearly all real music. A position digit still always picks the same lane (<code>2</code> is always the 3rd) &mdash; relative mode only decides <i>which octave</i> that lane sounds in, exactly like LilyPond only ever adjusts octave, never which letter you meant.</li>
+        <li>The rule, straight from LilyPond: each new note is placed in whichever octave is <b>closest</b> to the previous note. Most of the time that's the natural, expected voicing, so you never have to think about octaves at all.</li>
+        <li><code>'</code> pushes a note one octave <i>higher</i> than that automatic placement; <code>,</code> pushes it one octave <i>lower</i>. Stack them for more (<code>''</code> = two octaves up). Attach marks directly to a position, before the duration: <code>1'8</code>.</li>
+        <li>Inside a chord, each position can carry its own marks, and each one is placed relative to the position <i>before it in the same chord</i> &mdash; <code>&lt;12'3&gt;</code> voices the 3rd an octave higher than the root, with the 5th then falling closest to <i>that</i>. What comes after the chord continues relative to its <b>last</b> note, not its first &mdash; also straight out of LilyPond.</li>
+        <li>Each hand tracks its own running reference across the whole part (bar lines don't reset it), starting from the root at rule-of-thumb octave 0.</li>
+        <li><span class="assumption">Known LilyPond-style quirk:</span> because every chord here is always spelled low-lane-to-high-lane, the register can quietly climb (or, with LH's root/fifth, sit a fifth low rather than a fourth high) over several bars. If a passage drifts further than you want, drop in a <code>,</code> to pull it back &mdash; this is the same "remember your octave" caution LilyPond's own docs give, not a bug.</li>
+        <li>Hover any block to see its resolved note name (at most one sharp/flat, spelled from whichever natural letter is closest).</li>
+      </ul>
+    </div>
+
+    <div class="legend-section">
+      <b>5. Repeats and tuplets</b> &mdash; borrowed from LilyPond's own <code>\repeat</code> and <code>\tuplet</code>
+      <ul>
+        <li><code>\repeat unfold N { token }</code> &mdash; plays that one note/chord token <code>N</code> times in a row, each computed normally through the relative-pitch chain (so repeating the same position just holds still, as expected).</li>
+        <li><code>\tuplet 3/2 { a b c }</code> &mdash; a triplet: fits exactly three positions into the time of two of the currently-persisting duration (e.g. three notes in the space of two 8ths = one beat). Only 3-against-2 is supported.</li>
+        <li><span class="assumption">Dropped from the previous version:</span> the old <code>\arp</code> command is gone &mdash; duration persistence already makes writing an arpeggio as plain sequential notes just as short (<code>&lt;123&gt;8 1 2 3</code>), so a separate command added nothing.</li>
+      </ul>
+    </div>
+
+    <div class="legend-section">
+      <b>6. Swing &amp; chord quality</b>
+      <ul>
+        <li>The <b>Swing</b> toggle nudges every straight-8th "and" slightly later for a long&ndash;short feel. It's cosmetic only and doesn't change duration math or the bar check.</li>
+        <li>This tool covers major, minor, and seventh chords: get a minor 3rd/7th with a half-step-down mark relative to the major one &mdash; <span class="assumption">not yet wired up as a dedicated accidental; for now, voice it by ear with the octave marks available.</span> LilyPond's own <code>\chordmode</code> (<code>c:m7</code>, <code>c:maj7</code>&hellip;) auto-expands named chord qualities into pitches, which is worth knowing about, but this tool deliberately keeps manual lane-by-lane voicing since showing <i>how a chord is voiced</i> is the point &mdash; not just which chord it is.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var BASE = 32; // 32nd-note units per 4/4 bar — fine enough grain for dotted 16ths
+  var PX = 7;    // px per unit
+  var NATURALS = [[0,'C'],[2,'D'],[4,'E'],[5,'F'],[7,'G'],[9,'A'],[11,'B']];
+  var RH_LANES = { '1':{row:'C1',pc:0}, '2':{row:'C2',pc:4}, '3':{row:'C3',pc:7}, '4':{row:'C4',pc:11} };
+  var LH_LANES = { '1':{row:'B1',pc:0}, 'F':{row:'BF',pc:7} };
+  var RH_ROW_ORDER = ['C4','C3','C2','C1'];
+  var LH_ROW_ORDER = ['BF','B1'];
+
+  var swing = false;
+  var bars = 2;
+
+  var rhInput = document.getElementById('rhInput');
+  var lhInput = document.getElementById('lhInput');
+  var swingToggle = document.getElementById('swingToggle');
+  var barsWrap = document.getElementById('barsWrap');
+  var barsCount = document.getElementById('barsCount');
+  var rhError = document.getElementById('rhError');
+  var lhError = document.getElementById('lhError');
+  var styleSelect = document.getElementById('styleSelect');
+  var styleNameInput = document.getElementById('styleNameInput');
+  var saveStyleBtn = document.getElementById('saveStyleBtn');
+  var tempoInput = document.getElementById('tempoInput');
+  var keySel = document.getElementById('keySel');
+  var chordProgInput = document.getElementById('chordProgInput');
+  var variationSelect = document.getElementById('variationSelect');
+  var variationsList = document.getElementById('variationsList');
+  var variationsChips = document.getElementById('variationsChips');
+
+  swingToggle.addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if(!btn) return;
+    swing = btn.dataset.swing === 'on';
+    swingToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b===btn); });
+    markDirty();
+    render();
+  });
+  document.getElementById('barsUp').addEventListener('click', function(){ if(bars<4){ bars++; barsCount.textContent=bars; markDirty(); render(); } });
+  document.getElementById('barsDown').addEventListener('click', function(){ if(bars>1){ bars--; barsCount.textContent=bars; markDirty(); render(); } });
+
+  // ---- styles (presets) ----
+  var BUILTIN_STYLES = {
+    'Simple Triads': {
+      tempo:90, key:'C Major', chordProgression:'C – Am – F – G', swing:false, bars:2,
+      rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:null
+    },
+    'Swung Feel': {
+      tempo:100, key:'C Major', chordProgression:'C – F – C – G', swing:true, bars:2,
+      rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:'Simple Triads'
+    },
+    'Slow Ballad': {
+      tempo:66, key:'C Major', chordProgression:'C – G – Am – F', swing:false, bars:1,
+      rh:"<123>4 1 2 3", lh:"14 F4 14 F4", variationOf:null
+    }
+  };
+  var customStyles = {};
+  var STYLES = {};
+  var dirty = false;
+  var CUSTOM_VALUE = '__custom__';
+
+  function loadCustomStyles(){
+    try{
+      var raw = localStorage.getItem('intervalGridStyles');
+      if(raw) customStyles = JSON.parse(raw) || {};
+    } catch(e){ customStyles = {}; }
+  }
+  function saveCustomStyles(){
+    try{ localStorage.setItem('intervalGridStyles', JSON.stringify(customStyles)); } catch(e){}
+  }
+  function rebuildStyleMap(){
+    STYLES = {};
+    Object.keys(BUILTIN_STYLES).forEach(function(k){ STYLES[k] = BUILTIN_STYLES[k]; });
+    Object.keys(customStyles).forEach(function(k){ STYLES[k] = customStyles[k]; });
+  }
+  function rebuildStyleOptions(selected){
+    styleSelect.innerHTML = '';
+    Object.keys(STYLES).forEach(function(name){
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      styleSelect.appendChild(opt);
+    });
+    styleSelect.value = selected;
+  }
+  function addCustomOption(){
+    if(!styleSelect.querySelector('option[value="'+CUSTOM_VALUE+'"]')){
+      var opt = document.createElement('option');
+      opt.value = CUSTOM_VALUE; opt.textContent = 'Custom';
+      styleSelect.insertBefore(opt, styleSelect.firstChild);
+    }
+    styleSelect.value = CUSTOM_VALUE;
+  }
+  function removeCustomOption(){
+    var opt = styleSelect.querySelector('option[value="'+CUSTOM_VALUE+'"]');
+    if(opt) opt.remove();
+  }
+  // Only base (non-variation) styles can be picked as a parent — variations can't nest.
+  function rebuildVariationOptions(excludeName){
+    variationSelect.innerHTML = '<option value="">None (base style)</option>';
+    Object.keys(STYLES).forEach(function(name){
+      if(name === excludeName) return;
+      if(STYLES[name].variationOf) return;
+      var opt = document.createElement('option');
+      opt.value = name; opt.textContent = name;
+      variationSelect.appendChild(opt);
+    });
+  }
+  // A style that isn't itself a variation shows the styles that point back to it.
+  function renderVariationsFor(name){
+    var s = STYLES[name];
+    if(!s || s.variationOf){ variationsList.hidden = true; return; }
+    var kids = Object.keys(STYLES).filter(function(k){ return STYLES[k].variationOf === name; });
+    if(!kids.length){ variationsList.hidden = true; return; }
+    variationsChips.innerHTML = '';
+    kids.forEach(function(k){
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'variation-chip';
+      chip.textContent = k;
+      chip.addEventListener('click', function(){ applyStyle(k); });
+      variationsChips.appendChild(chip);
+    });
+    variationsList.hidden = false;
+  }
+  function markDirty(){
+    if(dirty) return;
+    dirty = true;
+    addCustomOption();
+    styleNameInput.value = 'Custom';
+    styleNameInput.hidden = false;
+    saveStyleBtn.hidden = false;
+  }
+  function applyStyle(name){
+    var s = STYLES[name];
+    if(!s) return;
+    tempoInput.value = s.tempo!=null ? s.tempo : '';
+    keySel.value = s.key || 'C Major';
+    chordProgInput.value = s.chordProgression || '';
+    swing = !!s.swing;
+    swingToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', (b.dataset.swing==='on')===swing); });
+    bars = s.bars || 1;
+    barsCount.textContent = bars;
+    rhInput.value = s.rh || '';
+    lhInput.value = s.lh || '';
+    dirty = false;
+    removeCustomOption();
+    styleNameInput.hidden = true;
+    saveStyleBtn.hidden = true;
+    styleSelect.value = name;
+    rebuildVariationOptions(name);
+    variationSelect.value = s.variationOf || '';
+    renderVariationsFor(name);
+    render();
+  }
+
+  styleSelect.addEventListener('change', function(){
+    if(styleSelect.value === CUSTOM_VALUE) return;
+    applyStyle(styleSelect.value);
+  });
+  saveStyleBtn.addEventListener('click', function(){
+    var name = styleNameInput.value.trim() || 'Custom';
+    var style = {
+      tempo: tempoInput.value ? Number(tempoInput.value) : null,
+      key: keySel.value,
+      chordProgression: chordProgInput.value,
+      swing: swing, bars: bars,
+      rh: rhInput.value, lh: lhInput.value,
+      variationOf: variationSelect.value || null
+    };
+    customStyles[name] = style;
+    saveCustomStyles();
+    rebuildStyleMap();
+    rebuildStyleOptions(name);
+    dirty = false;
+    styleNameInput.hidden = true;
+    saveStyleBtn.hidden = true;
+    rebuildVariationOptions(name);
+    renderVariationsFor(name);
+  });
+  tempoInput.addEventListener('input', markDirty);
+  keySel.addEventListener('change', markDirty);
+  chordProgInput.addEventListener('input', markDirty);
+  variationSelect.addEventListener('change', markDirty);
+
+  function unitsFor(digit, dots, err){
+    if(BASE % digit !== 0){ err.push('Duration "' + digit + '" is not supported (use 1, 2, 4, 8, 16, or 32).'); return BASE/4; }
+    var base = BASE / digit;
+    var mult = dots>0 ? (2 - Math.pow(0.5, dots)) : 1;
+    return Math.round(base * mult);
+  }
+
+  // Preprocess so |, {, } are always their own token regardless of spacing.
+  function tokenize(str){
+    return str.replace(/([{}|])/g, ' $1 ').trim().split(/\s+/).filter(Boolean);
+  }
+
+  var NOTE_RE = /^([0-9A-Fa-f])([',]*)(\d*)(\.*)(~)?$/;
+  var CHORD_RE = /^<([^>]+)>(\d*)(\.*)(~)?$/;
+  var REST_RE = /^r(\d*)(\.*)(~)?$/;
+
+  function parseMarks(markStr){
+    var n = 0;
+    for(var i=0;i<markStr.length;i++){ n += markStr[i]==="'" ? 1 : -1; }
+    return n;
+  }
+
+  // LilyPond's relative-octave rule: each new pitch is placed in the octave
+  // nearest the reference, then explicit '/, marks add whole extra octaves.
+  function place(lane, marks, refState){
+    var ref = refState.value;
+    var k = Math.round((ref - lane.pc) / 12);
+    var semi = lane.pc + 12*k + 12*marks;
+    refState.value = semi;
+    return semi;
+  }
+
+  function parseChordInner(raw, lanes, isRH, err){
+    var out = [];
+    var re = /([0-9A-Fa-f])([',]*)/g;
+    var m, consumed = 0;
+    while((m = re.exec(raw))){
+      consumed += m[0].length;
+      var lane = lanes[isRH ? m[1] : m[1].toUpperCase()];
+      if(!lane){
+        err.push('Unknown ' + (isRH?'right':'left') + '-hand position "' + m[1] + '".');
+        continue;
+      }
+      out.push({lane:lane, marks:parseMarks(m[2])});
+    }
+    if(consumed !== raw.length){
+      err.push('Could not parse chord contents "' + raw + '".');
+    }
+    return out;
+  }
+
+  // Single pass over one hand's whole token stream (all bars). Duration and the
+  // relative-pitch reference persist across bar lines, exactly as in LilyPond —
+  // only the bar check resets per bar.
+  function parseHand(str, isRH, err){
+    var lanes = isRH ? RH_LANES : LH_LANES;
+    var tokens = tokenize(str);
+    var events = [];      // {bar, startUnits, durUnits, notes:[{row,semi}], isRest, tie}
+    var barChecks = [];   // {bar, actual}
+    var refState = {value:0};
+    var curDigit = 8;
+    var cursor = 0, barIdx = 0;
+
+    function finishBar(){
+      barChecks.push({bar:barIdx, actual:cursor});
+      barIdx++; cursor = 0;
+    }
+    function place1(lane, marks){ return place(lane, marks, refState); }
+
+    function placeToken(raw){
+      var mC = CHORD_RE.exec(raw);
+      if(mC){
+        var inner = parseChordInner(mC[1], lanes, isRH, err);
+        var digit = mC[2] ? parseInt(mC[2],10) : curDigit;
+        if(mC[2]) curDigit = digit;
+        var units = unitsFor(digit, mC[3].length, err);
+        var notes = inner.map(function(p){ return {row:p.lane.row, pc:p.lane.pc, semi: place1(p.lane, p.marks)}; });
+        if(barIdx < bars) events.push({bar:barIdx, startUnits:cursor, durUnits:units, notes:notes, isRest:false, tie: mC[4]==='~'});
+        cursor += units;
+        return;
+      }
+      var mR = REST_RE.exec(raw);
+      if(mR){
+        var digitR = mR[1] ? parseInt(mR[1],10) : curDigit;
+        if(mR[1]) curDigit = digitR;
+        var unitsR = unitsFor(digitR, mR[2].length, err);
+        if(barIdx < bars) events.push({bar:barIdx, startUnits:cursor, durUnits:unitsR, notes:[], isRest:true, tie:false});
+        cursor += unitsR;
+        return;
+      }
+      var mN = NOTE_RE.exec(raw);
+      if(mN){
+        var lane = lanes[isRH ? mN[1] : mN[1].toUpperCase()];
+        if(!lane){ err.push('Unknown ' + (isRH?'right':'left') + '-hand position "' + mN[1] + '".'); return; }
+        var digitN = mN[3] ? parseInt(mN[3],10) : curDigit;
+        if(mN[3]) curDigit = digitN;
+        var unitsN = unitsFor(digitN, mN[4].length, err);
+        var semi = place1(lane, parseMarks(mN[2]));
+        if(barIdx < bars) events.push({bar:barIdx, startUnits:cursor, durUnits:unitsN, notes:[{row:lane.row,pc:lane.pc,semi:semi}], isRest:false, tie: mN[5]==='~'});
+        cursor += unitsN;
+        return;
+      }
+      err.push('Could not parse token "' + raw + '".');
+    }
+
+    function consumeBlock(tokens, i){
+      // expects tokens[i] === '{'
+      var block = [];
+      var j = i+1;
+      while(j < tokens.length && tokens[j] !== '}'){ block.push(tokens[j]); j++; }
+      return {block:block, next:j+1};
+    }
+
+    var i = 0;
+    while(i < tokens.length){
+      var tok = tokens[i];
+      if(tok === '|'){
+        if(barIdx < bars) finishBar(); else { barIdx++; cursor = 0; }
+        i++; continue;
+      }
+      if(tok === '\\tuplet'){
+        if(tokens[i+1] !== '3/2' || tokens[i+2] !== '{'){
+          err.push('\\tuplet must be written as \\tuplet 3/2 { a b c }.');
+          i++; continue;
+        }
+        var blk = consumeBlock(tokens, i+2);
+        if(blk.block.length !== 3){
+          err.push('\\tuplet 3/2 { ... } needs exactly 3 notes/chords inside.');
+        } else {
+          var totalUnits = unitsFor(curDigit, 0, err) * 2;
+          var totalPx = totalUnits * PX;
+          var startPx = cursor * PX;
+          for(var t=0; t<3; t++){
+            var one = blk.block[t];
+            var mOne = CHORD_RE.exec(one) || NOTE_RE.exec(one);
+            var isChordOne = !!CHORD_RE.exec(one);
+            var notesOne = [];
+            if(isChordOne){
+              var mm = CHORD_RE.exec(one);
+              parseChordInner(mm[1], lanes, isRH, err).forEach(function(p){
+                notesOne.push({row:p.lane.row, pc:p.lane.pc, semi: place1(p.lane, p.marks)});
+              });
+            } else {
+              var mn = NOTE_RE.exec(one);
+              if(!mn){ err.push('Could not parse tuplet member "' + one + '".'); continue; }
+              var laneOne = lanes[isRH ? mn[1] : mn[1].toUpperCase()];
+              if(!laneOne){ err.push('Unknown position "' + mn[1] + '" in tuplet.'); continue; }
+              notesOne.push({row:laneOne.row, pc:laneOne.pc, semi: place1(laneOne, parseMarks(mn[2]))});
+            }
+            if(barIdx < bars){
+              events.push({
+                bar:barIdx, startUnits:cursor, durUnits: totalUnits/3, notes:notesOne, isRest:false, tie:false,
+                pxOverrideLeft: startPx + t*(totalPx/3), pxOverrideWidth: totalPx/3
+              });
+            }
+          }
+          cursor += totalUnits;
+        }
+        i = blk.next; continue;
+      }
+      if(tok === '\\repeat'){
+        if(tokens[i+1] !== 'unfold' || !/^\d+$/.test(tokens[i+2]) || tokens[i+3] !== '{'){
+          err.push('\\repeat must be written as \\repeat unfold N { token }.');
+          i++; continue;
+        }
+        var count = parseInt(tokens[i+2],10);
+        var blk2 = consumeBlock(tokens, i+3);
+        if(blk2.block.length !== 1){
+          err.push('\\repeat unfold N { ... } needs exactly one note/chord/rest inside.');
+        } else {
+          for(var r=0;r<count;r++) placeToken(blk2.block[0]);
+        }
+        i = blk2.next; continue;
+      }
+      placeToken(tok);
+      i++;
+    }
+    if(cursor > 0 || barIdx < bars) finishBar();
+    return {events:events, barChecks:barChecks};
+  }
+
+  function noteName(absSemi){
+    var oct = Math.floor(absSemi/12);
+    var pc = ((absSemi%12)+12)%12;
+    var best=null,bestDist=Infinity;
+    NATURALS.forEach(function(n){
+      var d = pc - n[0];
+      if(Math.abs(d) < Math.abs(bestDist) || (Math.abs(d)===Math.abs(bestDist) && d<0)) { bestDist=d; best=n; }
+    });
+    var acc = '';
+    if(bestDist > 0) acc = '#'.repeat(bestDist);
+    else if(bestDist < 0) acc = 'b'.repeat(-bestDist);
+    return best[1] + acc + (oct!==0 ? (oct>0?'+'+oct:String(oct)) : '');
+  }
+
+  // One continuous timeline across every displayed bar (no per-bar heading) —
+  // bars are told apart only by a thin divider line at each boundary.
+  function buildTimeline(){
+    var barW = BASE * PX, totalW = bars * barW;
+    var wrap = document.createElement('div');
+    wrap.className = 'bar-block';
+
+    var header = document.createElement('div');
+    header.className = 'beat-header';
+    header.innerHTML = '<div class="spacer"></div><div class="ruler" style="width:'+totalW+'px"></div>';
+    var ruler = header.querySelector('.ruler');
+    for(var b=0;b<bars;b++){
+      for(var beat=0;beat<4;beat++){
+        var s = document.createElement('span');
+        s.className = 'beat-num';
+        s.style.left = (b*barW + beat*8*PX) + 'px';
+        s.textContent = String(beat+1);
+        ruler.appendChild(s);
+      }
+    }
+    wrap.appendChild(header);
+
+    var rhRows = buildHandRows(wrap, RH_ROW_ORDER, totalW, barW);
+    var gap = document.createElement('div'); gap.className = 'hand-gap';
+    wrap.appendChild(gap);
+    var lhRows = buildHandRows(wrap, LH_ROW_ORDER, totalW, barW);
+
+    return {wrap:wrap, rhRows:rhRows, lhRows:lhRows, barW:barW};
+  }
+
+  function buildHandRows(container, rowOrder, totalW, barW){
+    var rows = {};
+    var group = document.createElement('div');
+    group.className = 'hand-group';
+    rowOrder.forEach(function(rowId){
+      var lane = document.createElement('div');
+      lane.className = 'lane';
+      var label = document.createElement('div');
+      label.className = 'lane-label';
+      label.textContent = rowId;
+      var strip = document.createElement('div');
+      strip.className = 'lane-row';
+      strip.style.width = totalW + 'px';
+      for(var i=1;i<bars;i++){
+        var divider = document.createElement('div');
+        divider.className = 'bar-divider';
+        divider.style.left = (i*barW) + 'px';
+        strip.appendChild(divider);
+      }
+      lane.appendChild(label);
+      lane.appendChild(strip);
+      group.appendChild(lane);
+      rows[rowId] = strip;
+    });
+    container.appendChild(group);
+    return rows;
+  }
+
+  function absUnits(e){ return e.bar*BASE + e.startUnits; }
+
+  function renderHandEvents(rows, events, handClass, barW){
+    var byRow = {};
+    events.forEach(function(e){
+      if(e.isRest){
+        var restRow = handClass==='rh' ? 'C1' : 'B1';
+        addBlock(rows[restRow], e, null, handClass, true, barW);
+        return;
+      }
+      e.notes.forEach(function(n){
+        if(!byRow[n.row]) byRow[n.row] = [];
+        byRow[n.row].push({e:e, n:n});
+        addBlock(rows[n.row], e, n, handClass, false, barW);
+      });
+    });
+    // ties: bridge to the immediately-following same-row event (can cross a bar line)
+    Object.keys(byRow).forEach(function(rowId){
+      var list = byRow[rowId].sort(function(a,b){ return absUnits(a.e)-absUnits(b.e); });
+      for(var i=0;i<list.length-1;i++){
+        var cur = list[i], nxt = list[i+1];
+        if(cur.e.tie && absUnits(nxt.e) === absUnits(cur.e) + cur.e.durUnits){
+          var left = absUnits(cur.e)*PX;
+          var width = (absUnits(nxt.e) - absUnits(cur.e))*PX;
+          var bridge = document.createElement('div');
+          bridge.className = 'tie-bridge ' + handClass;
+          bridge.style.left = left + 'px';
+          bridge.style.width = width + 'px';
+          rows[rowId].appendChild(bridge);
+        }
+      }
+    });
+  }
+
+  function addBlock(strip, e, note, handClass, isRest, barW){
+    if(!strip) return;
+    var left = (e.pxOverrideLeft!==undefined ? e.pxOverrideLeft : e.startUnits*PX) + e.bar*barW;
+    var width = e.pxOverrideWidth!==undefined ? e.pxOverrideWidth : e.durUnits*PX;
+    if(swing && Math.round(e.startUnits) % 8 === 4){ left += 4; }
+    var el = document.createElement('div');
+    el.className = 'note ' + handClass + (isRest ? ' rest' : '');
+    el.style.left = left + 'px';
+    el.style.width = Math.max(width-2, 6) + 'px';
+    el.style.height = '68%';
+    if(!isRest && note){
+      var octave = Math.round((note.semi - note.pc)/12);
+      if(octave !== 0) el.textContent = (octave>0?'+':'') + octave;
+      el.title = noteName(note.semi);
+    }
+    strip.appendChild(el);
+  }
+
+  function render(){
+    var rErr = [], lErr = [];
+    var rh = parseHand(rhInput.value, true, rErr);
+    var lh = parseHand(lhInput.value, false, lErr);
+
+    barsWrap.innerHTML = '';
+    var tl = buildTimeline();
+    renderHandEvents(tl.rhRows, rh.events, 'rh', tl.barW);
+    renderHandEvents(tl.lhRows, lh.events, 'lh', tl.barW);
+    barsWrap.appendChild(tl.wrap);
+
+    var msgs = [];
+    rh.barChecks.forEach(function(c){ if(c.actual !== BASE) msgs.push('Bar ' + (c.bar+1) + ' RH: ' + c.actual + '/' + BASE + ' units'); });
+    lh.barChecks.forEach(function(c){ if(c.actual !== BASE) msgs.push('Bar ' + (c.bar+1) + ' LH: ' + c.actual + '/' + BASE + ' units'); });
+    if(msgs.length){
+      var warn = document.createElement('div');
+      warn.className = 'bar-check';
+      warn.textContent = 'Bar check failed (incomplete bar) — ' + msgs.join(', ');
+      barsWrap.appendChild(warn);
+    }
+
+    rhError.textContent = rErr.join(' ');
+    rhError.classList.toggle('show', rErr.length>0);
+    lhError.textContent = lErr.join(' ');
+    lhError.classList.toggle('show', lErr.length>0);
+  }
+
+  rhInput.addEventListener('input', function(){ markDirty(); render(); });
+  lhInput.addEventListener('input', function(){ markDirty(); render(); });
+
+  loadCustomStyles();
+  rebuildStyleMap();
+  rebuildStyleOptions('Simple Triads');
+  applyStyle('Simple Triads');
+})();
+</script>
