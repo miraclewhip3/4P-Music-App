@@ -142,20 +142,11 @@
     width:56px; flex:none; font-family:var(--display); font-size:12px; font-weight:600;
     color:var(--muted); display:flex; align-items:center; justify-content:flex-end; padding-right:10px;
   }
+  /* Gridlines are set inline by buildHandRows() — spacing follows the current PX,
+     and 16th lines only appear when the notation actually uses 16ths or finer. */
   .lane-row{
     position:relative; height:40px; background:var(--cell);
     border-bottom:1px solid var(--cell-border);
-    background-image:
-      repeating-linear-gradient(to right, var(--cell-border-strong) 0 1px, transparent 1px 56px),
-      repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 28px),
-      repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 14px);
-  }
-  /* Doubled scale (any 16th-or-finer duration present) — matches PX_BASE*2 in JS. */
-  .lane-row.scale2{
-    background-image:
-      repeating-linear-gradient(to right, var(--cell-border-strong) 0 1px, transparent 1px 112px),
-      repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 56px),
-      repeating-linear-gradient(to right, var(--cell-border) 0 1px, transparent 1px 28px);
   }
   .lane:first-child .lane-row{ border-top:1px solid var(--cell-border-strong); }
   .hand-gap{ height:10px; }
@@ -345,8 +336,10 @@
 <script>
 (function(){
   var BASE = 32; // 32nd-note units per 4/4 bar — fine enough grain for dotted 16ths
-  var PX_BASE = 7;  // px per unit at normal (8th-note-or-coarser) resolution
-  var PX = PX_BASE; // current px per unit — render() doubles this when 16ths (or finer) appear
+  var PX_BASE = 7;  // minimum px per unit at normal (8th-note-or-coarser) resolution
+  var PX = PX_BASE; // current px per unit — render() stretches it to fill the panel
+  var fine = false; // any 16th-or-finer duration present — adds 16th gridlines, doubles the minimum PX
+  var LABEL_W = 56; // .lane-label width in CSS
   var NATURALS = [[0,'C'],[2,'D'],[4,'E'],[5,'F'],[7,'G'],[9,'A'],[11,'B']];
   var RH_LANES = { '1':{row:'C1',pc:0}, '2':{row:'C2',pc:4}, '3':{row:'C3',pc:7}, '4':{row:'C4',pc:11} };
   var LH_LANES = { '1':{row:'B1',pc:0}, 'F':{row:'BF',pc:7} };
@@ -744,6 +737,16 @@
     return {wrap:wrap, rhRows:rhRows, lhRows:lhRows, barW:barW};
   }
 
+  // Beat lines (strong) + 8th lines, plus 16th lines only when the notation needs them.
+  function gridlines(){
+    function line(color, units){
+      return 'repeating-linear-gradient(to right, var(' + color + ') 0 1px, transparent 1px ' + (units*PX) + 'px)';
+    }
+    var layers = [line('--cell-border-strong', 8), line('--cell-border', 4)];
+    if(fine) layers.push(line('--cell-border', 2));
+    return layers.join(', ');
+  }
+
   function buildHandRows(container, rowOrder, totalW, barW){
     var rows = {};
     var group = document.createElement('div');
@@ -755,8 +758,9 @@
       label.className = 'lane-label';
       label.textContent = rowId;
       var strip = document.createElement('div');
-      strip.className = 'lane-row' + (PX > PX_BASE ? ' scale2' : '');
+      strip.className = 'lane-row';
       strip.style.width = totalW + 'px';
+      strip.style.backgroundImage = gridlines();
       for(var i=1;i<bars;i++){
         var divider = document.createElement('div');
         divider.className = 'bar-divider';
@@ -810,7 +814,7 @@
     if(!strip) return;
     var left = e.startUnits*PX + e.bar*barW;
     var width = e.durUnits*PX;
-    if(swing && Math.round(e.startUnits) % 8 === 4){ left += 4; }
+    if(swing && Math.round(e.startUnits) % 8 === 4){ left += Math.round(PX * 4 / PX_BASE); }
     var el = document.createElement('div');
     el.className = 'note ' + handClass + (isRest ? ' rest' : '');
     el.style.left = left + 'px';
@@ -839,7 +843,13 @@
     var rh = parseHand(rhInput.value, true, rErr);
     var lh = parseHand(lhInput.value, false, lErr);
     bars = Math.max(1, rh.barChecks.length, lh.barChecks.length);
-    PX = finestUnits(rh, lh) < 4 ? PX_BASE * 2 : PX_BASE;
+    fine = finestUnits(rh, lh) < 4;
+    // Stretch the timeline to fill the panel; the minimum (PX_BASE, doubled when
+    // 16ths appear) only kicks in when that would squeeze notes too narrow, and
+    // the panel scrolls horizontally instead.
+    var minPX = fine ? PX_BASE * 2 : PX_BASE;
+    var avail = barsWrap.clientWidth - LABEL_W;
+    PX = Math.max(minPX, Math.floor(avail / (bars * BASE)));
 
     barsWrap.innerHTML = '';
     var tl = buildTimeline();
@@ -865,6 +875,12 @@
 
   rhInput.addEventListener('input', function(){ markDirty(); render(); });
   lhInput.addEventListener('input', function(){ markDirty(); render(); });
+  var resizeQueued = false;
+  window.addEventListener('resize', function(){
+    if(resizeQueued) return;
+    resizeQueued = true;
+    requestAnimationFrame(function(){ resizeQueued = false; render(); });
+  });
 
   // Prefer the version-controlled styles.json (so the built-in library can be edited
   // and diffed outside this file); fall back to the embedded copy if it can't be
