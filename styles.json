@@ -23,7 +23,7 @@
     "tempo": 66,
     "key": "C Major",
     "chordProgression": "C – G – Am – F",
-    "tags": ["ballad"],
+    "tags": ["ballad", "basic"],
     "swing": false,
     "rh": "<123>4 1 2 3",
     "lh": "14 F4 14 F4",

@@ -10,3 +10,5 @@ Notes on potential features. Not committed to any of these — just a running li
 | Inversions | Notation for voicing a chord in a specific inversion. |
 | Interval notation | Express notes/chords as intervals rather than fixed lane positions. |
 | Better repeat syntax | `\repeat N { }` works but is clunky — look at how Chord Player handles repeats for a cleaner model. |
+| Read Chord Player Files | Have claude learn how to read chord player files and convert them into this format. |
+| Learn more about Chord Player | How does it work with scales? Do I want conditions? Do I want this to play sound? |
