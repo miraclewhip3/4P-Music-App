@@ -84,6 +84,7 @@
   .style-name-field{ flex-direction:row; align-items:center; gap:10px; }
   .style-name-field label{ margin:0; }
   .style-name-field select{ min-width:200px; }
+  .tag-filter-field select{ min-width:140px; }
   .style-name-input{ min-width:170px; }
   .chord-prog-field{ flex:1; min-width:220px; }
   .chord-prog-field input{ width:100%; }
@@ -196,6 +197,12 @@
 
   <div class="panel style-panel">
     <div class="style-row style-name-row">
+      <div class="field-inline tag-filter-field">
+        <label for="tagFilterSelect">Filter by Tag</label>
+        <select id="tagFilterSelect">
+          <option value="">All Tags</option>
+        </select>
+      </div>
       <div class="field-inline style-name-field">
         <label for="styleSelect">Style Name</label>
         <select id="styleSelect"></select>
@@ -233,8 +240,12 @@
         <label for="chordProgInput">Chord Progression</label>
         <input type="text" id="chordProgInput" placeholder="e.g. C – Am – F – G">
       </div>
+      <div class="field-inline chord-prog-field">
+        <label for="tagsInput">Tags</label>
+        <input type="text" id="tagsInput" placeholder="e.g. dance, upbeat">
+      </div>
     </div>
-    <div class="hint">Tempo, key, and chord progression are optional and descriptive &mdash; only key currently affects the grid. Pick a <b>Style Name</b> to load a full preset (tempo, key, progression, swing, bars, and both hands); change anything here or below and it becomes <b>Custom</b>, ready to save as your own.</div>
+    <div class="hint">Tempo, key, chord progression, and tags are optional and descriptive &mdash; only key currently affects the grid. Tags are comma-separated and can be used to filter the <b>Style Name</b> list above. Pick a <b>Style Name</b> to load a full preset; change anything here or below and it becomes <b>Custom</b>, ready to save as your own.</div>
   </div>
 
   <div class="panel controls">
@@ -363,6 +374,8 @@
   var tempoInput = document.getElementById('tempoInput');
   var keySel = document.getElementById('keySel');
   var chordProgInput = document.getElementById('chordProgInput');
+  var tagsInput = document.getElementById('tagsInput');
+  var tagFilterSelect = document.getElementById('tagFilterSelect');
   var variationSelect = document.getElementById('variationSelect');
   var variationsList = document.getElementById('variationsList');
   var variationsChips = document.getElementById('variationsChips');
@@ -413,14 +426,44 @@
     Object.keys(BUILTIN_STYLES).forEach(function(k){ STYLES[k] = BUILTIN_STYLES[k]; });
     Object.keys(customStyles).forEach(function(k){ STYLES[k] = customStyles[k]; });
   }
+  function getAllTags(){
+    var set = {};
+    Object.keys(STYLES).forEach(function(name){
+      (STYLES[name].tags || []).forEach(function(t){ if(t) set[t] = true; });
+    });
+    return Object.keys(set).sort(function(a,b){ return a.localeCompare(b); });
+  }
+  function rebuildTagFilterOptions(){
+    var prev = tagFilterSelect.value;
+    var tags = getAllTags();
+    tagFilterSelect.innerHTML = '<option value="">All Tags</option>';
+    tags.forEach(function(tag){
+      var opt = document.createElement('option');
+      opt.value = tag; opt.textContent = tag;
+      tagFilterSelect.appendChild(opt);
+    });
+    tagFilterSelect.value = tags.indexOf(prev) !== -1 ? prev : '';
+  }
+  // Styles matching the active tag filter ('' = every style, filter is optional).
+  function filteredStyleNames(){
+    var tag = tagFilterSelect.value;
+    return Object.keys(STYLES).filter(function(name){
+      return !tag || (STYLES[name].tags || []).indexOf(tag) !== -1;
+    });
+  }
+  // Returns the name actually left selected (falls back to the first match if
+  // `selected` got filtered out), so callers can decide whether to reload it.
   function rebuildStyleOptions(selected){
     styleSelect.innerHTML = '';
-    Object.keys(STYLES).forEach(function(name){
+    var names = filteredStyleNames();
+    names.forEach(function(name){
       var opt = document.createElement('option');
       opt.value = name; opt.textContent = name;
       styleSelect.appendChild(opt);
     });
-    styleSelect.value = selected;
+    var target = names.indexOf(selected) !== -1 ? selected : names[0];
+    if(target !== undefined) styleSelect.value = target;
+    return target;
   }
   function addCustomOption(){
     if(!styleSelect.querySelector('option[value="'+CUSTOM_VALUE+'"]')){
@@ -476,6 +519,7 @@
     tempoInput.value = s.tempo!=null ? s.tempo : '';
     keySel.value = s.key || 'C Major';
     chordProgInput.value = s.chordProgression || '';
+    tagsInput.value = (s.tags || []).join(', ');
     swing = !!s.swing;
     swingToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', (b.dataset.swing==='on')===swing); });
     rhInput.value = s.rh || '';
@@ -495,12 +539,18 @@
     if(styleSelect.value === CUSTOM_VALUE) return;
     applyStyle(styleSelect.value);
   });
+  tagFilterSelect.addEventListener('change', function(){
+    var prev = styleSelect.value;
+    var target = rebuildStyleOptions(prev);
+    if(target !== undefined && target !== prev) applyStyle(target);
+  });
   saveStyleBtn.addEventListener('click', function(){
     var name = styleNameInput.value.trim() || 'Custom';
     var style = {
       tempo: tempoInput.value ? Number(tempoInput.value) : null,
       key: keySel.value,
       chordProgression: chordProgInput.value,
+      tags: tagsInput.value.split(',').map(function(t){ return t.trim(); }).filter(Boolean),
       swing: swing,
       rh: rhInput.value, lh: lhInput.value,
       variationOf: variationSelect.value || null
@@ -508,6 +558,8 @@
     customStyles[name] = style;
     saveCustomStyles();
     rebuildStyleMap();
+    rebuildTagFilterOptions();
+    tagFilterSelect.value = ''; // show the style just saved even if it doesn't match a stale filter
     rebuildStyleOptions(name);
     dirty = false;
     styleNameInput.hidden = true;
@@ -518,6 +570,7 @@
   tempoInput.addEventListener('input', markDirty);
   keySel.addEventListener('change', markDirty);
   chordProgInput.addEventListener('input', markDirty);
+  tagsInput.addEventListener('input', markDirty);
   variationSelect.addEventListener('change', markDirty);
 
   function unitsFor(digit, dots, err){
@@ -895,6 +948,7 @@
   loadBuiltinStyles().then(function(builtins){
     BUILTIN_STYLES = builtins;
     rebuildStyleMap();
+    rebuildTagFilterOptions();
     rebuildStyleOptions('Simple Triads');
     applyStyle('Simple Triads');
   });
