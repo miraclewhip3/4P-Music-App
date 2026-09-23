@@ -143,7 +143,8 @@
     color:var(--muted); display:flex; align-items:center; justify-content:flex-end; padding-right:10px;
   }
   /* Gridlines are set inline by buildHandRows() — spacing follows the current PX,
-     and 16th lines only appear when the notation actually uses 16ths or finer. */
+     and 16th lines only appear when the notation actually uses 16ths or finer.
+     Height must equal CELL in JS: grid cells are ALWAYS square. */
   .lane-row{
     position:relative; height:40px; background:var(--cell);
     border-bottom:1px solid var(--cell-border);
@@ -290,7 +291,7 @@
         <li><b>It persists.</b> Once set, later notes reuse it until a new duration is written &mdash; so <code>1 2 3 4</code> after an initial <code>&lt;123&gt;4</code> are all quarters too, with nothing extra to type. This is the single biggest reason LilyPond input is fast to enter, and it works the same way here.</li>
         <li>A trailing <code>.</code> dots the duration (&times;1.5); <code>..</code> double-dots (&times;1.75). <code>4.</code> = dotted quarter.</li>
         <li>Before anything is specified, the default is an eighth note (<code>8</code>).</li>
-        <li>If a 16th note (or anything finer) shows up anywhere in either hand, the whole grid doubles in width &mdash; giving 16ths the same visual room 8ths normally get, instead of squeezing them into half the space. A pattern using only 8ths or coarser stays at the normal width.</li>
+        <li>If a 16th note (or anything finer) shows up anywhere in either hand, each grid column becomes a 16th instead of an 8th, so the grid doubles in width &mdash; giving 16ths the same visual room 8ths normally get, instead of squeezing them into half the space. Grid cells are always square either way; wide grids scroll sideways.</li>
         <li>A trailing <code>~</code> ties a note into the next one of the same pitch, shown as a bridge connecting the two blocks.</li>
       </ul>
     </div>
@@ -336,10 +337,11 @@
 <script>
 (function(){
   var BASE = 32; // 32nd-note units per 4/4 bar — fine enough grain for dotted 16ths
-  var PX_BASE = 7;  // minimum px per unit at normal (8th-note-or-coarser) resolution
-  var PX = PX_BASE; // current px per unit — render() stretches it to fill the panel
-  var fine = false; // any 16th-or-finer duration present — adds 16th gridlines, doubles the minimum PX
-  var LABEL_W = 56; // .lane-label width in CSS
+  // Grid cells are ALWAYS square: one column (the finest gridline spacing) is exactly
+  // as wide as a lane row is tall, whatever note value that column represents.
+  var CELL = 40;    // px — must match .lane-row height in CSS
+  var fine = false; // any 16th-or-finer duration present — columns become 16ths instead of 8ths
+  var PX = CELL / 4; // px per unit — render() sets it so one column = CELL px
   var NATURALS = [[0,'C'],[2,'D'],[4,'E'],[5,'F'],[7,'G'],[9,'A'],[11,'B']];
   var RH_LANES = { '1':{row:'C1',pc:0}, '2':{row:'C2',pc:4}, '3':{row:'C3',pc:7}, '4':{row:'C4',pc:11} };
   var LH_LANES = { '1':{row:'B1',pc:0}, 'F':{row:'BF',pc:7} };
@@ -814,7 +816,7 @@
     if(!strip) return;
     var left = e.startUnits*PX + e.bar*barW;
     var width = e.durUnits*PX;
-    if(swing && Math.round(e.startUnits) % 8 === 4){ left += Math.round(PX * 4 / PX_BASE); }
+    if(swing && Math.round(e.startUnits) % 8 === 4){ left += Math.round(PX * 4 / 7); } // ~1/7 of an 8th
     var el = document.createElement('div');
     el.className = 'note ' + handClass + (isRest ? ' rest' : '');
     el.style.left = left + 'px';
@@ -844,12 +846,9 @@
     var lh = parseHand(lhInput.value, false, lErr);
     bars = Math.max(1, rh.barChecks.length, lh.barChecks.length);
     fine = finestUnits(rh, lh) < 4;
-    // Stretch the timeline to fill the panel; the minimum (PX_BASE, doubled when
-    // 16ths appear) only kicks in when that would squeeze notes too narrow, and
-    // the panel scrolls horizontally instead.
-    var minPX = fine ? PX_BASE * 2 : PX_BASE;
-    var avail = barsWrap.clientWidth - LABEL_W;
-    PX = Math.max(minPX, Math.floor(avail / (bars * BASE)));
+    // Square cells: a column is an 8th (4 units) or, when 16ths appear, a 16th (2 units),
+    // and is always CELL px wide. Wide grids scroll horizontally rather than shrink.
+    PX = CELL / (fine ? 2 : 4);
 
     barsWrap.innerHTML = '';
     var tl = buildTimeline();
@@ -875,12 +874,6 @@
 
   rhInput.addEventListener('input', function(){ markDirty(); render(); });
   lhInput.addEventListener('input', function(){ markDirty(); render(); });
-  var resizeQueued = false;
-  window.addEventListener('resize', function(){
-    if(resizeQueued) return;
-    resizeQueued = true;
-    requestAnimationFrame(function(){ resizeQueued = false; render(); });
-  });
 
   // Prefer the version-controlled styles.json (so the built-in library can be edited
   // and diffed outside this file); fall back to the embedded copy if it can't be
