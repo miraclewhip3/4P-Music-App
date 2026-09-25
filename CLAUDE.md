@@ -35,6 +35,8 @@ When editing `rh`/`lh` strings by hand: duration persists after rests too (`r8.`
 
 ## Workflow notes
 
+- **At the start of every session, before anything else, make sure the local server is running**: `preview_start` with `static-server` (reuses it if already up), then navigate the tab to `http://localhost:8420/interval-grid.html`. Do this on the first turn without being asked.
+
 - **Always commit and push after each completed change in this repo** — do this by default, without asking first.
 - `gh` CLI is authenticated as `miraclewhip3`; remote is `https://github.com/miraclewhip3/4P-Music-App` (private). If `git push` fails with "Repository not found" despite `gh auth status` looking fine, run `gh auth setup-git` (stale git credential helper, not a gh auth problem).
 - For parser/grammar changes, verify with a standalone Node test (extract the parsing logic, no DOM) before wiring into the browser — this has caught real bugs (duration-persistence math) that were easy to miss by inspection.
