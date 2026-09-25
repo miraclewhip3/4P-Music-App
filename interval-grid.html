@@ -162,6 +162,17 @@
   .note.rh{ background:var(--rh); color:#2a1712; }
   .note.lh{ background:var(--lh); color:#111a2e; }
   .note.rest{ background:transparent; border:1.5px dashed var(--muted-dim); }
+  .note{ gap:2px; }
+  /* Scale-step arrows: full cell height, so they overhang the block; the halo in
+     the hand color keeps the overhanging tips visible against the dark grid. */
+  .step-arrows{ flex:none; overflow:visible; }
+  .step-arrows path{ fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .step-arrows .halo{ stroke-width:5; }
+  .step-arrows.rh .halo{ stroke:var(--rh); }
+  .step-arrows.lh .halo{ stroke:var(--lh); }
+  .step-arrows .core{ stroke-width:2; }
+  .step-arrows.rh .core{ stroke:#2a1712; }
+  .step-arrows.lh .core{ stroke:#111a2e; }
   .tie-bridge{ position:absolute; top:50%; transform:translateY(-50%); height:58%; }
   .tie-bridge.rh{ background:var(--rh); }
   .tie-bridge.lh{ background:var(--lh); }
@@ -322,6 +333,7 @@
         <li>This is a deliberate break from LilyPond, which auto-picks the closest octave to the previous note. Here, no marks means the plain, unmoved lane pitch every time &mdash; fully predictable, and never something to double-check.</li>
         <li><code>'</code> shifts a note one octave <i>higher</i> than its lane's default; <code>,</code> shifts it one octave <i>lower</i>. Stack them for more (<code>''</code> = two octaves up). Attach marks directly to a position, before the duration: <code>1'8</code>. A mark is always measured from that fixed default, not from the previous note, so the same token always produces the same octave no matter what comes before it.</li>
         <li>Inside a chord, each position carries its own marks independently &mdash; <code>&lt;12'3&gt;</code> is root at its default octave, 3rd shifted up one, 5th at its default. Nothing about one note in a chord affects another's octave.</li>
+        <li><b>Scale steps:</b> <code>&gt;</code> after a position moves it <i>up</i> one note of the major scale built on the root (position <code>1</code>), <code>&gt;&gt;</code> up two; <code>&lt;</code> / <code>&lt;&lt;</code> move it down one / two. With the root on C: <code>1&gt;&gt;</code> = E, <code>1&gt;</code> = D, <code>3&lt;</code> = F, <code>4&gt;</code> = the C above, <code>1&lt;</code> = the B below. Write steps after any octave marks and before the duration (<code>1'&gt;&gt;8.</code>); they work inside chords too (<code>&lt;1&gt;&gt;23&gt;</code>). The block stays in its lane's row and shows one full-height arrow per step (&uarr; up, &darr; down). At most two steps per note &mdash; every scale note is within two steps of some chord tone.</li>
         <li>Hover any block to see its resolved note name (at most one sharp/flat, spelled from whichever natural letter is closest).</li>
       </ul>
     </div>
@@ -585,8 +597,11 @@
     return str.replace(/([{}|])/g, ' $1 ').trim().split(/\s+/).filter(Boolean);
   }
 
-  var NOTE_RE = /^([0-9A-Fa-f])([',]*)(\d*)(\.*)(~)?$/;
-  var CHORD_RE = /^<([^>]+)>(\d*)(\.*)(~)?$/;
+  // Position, octave marks, then optional scale steps (> / >> up, < / << down),
+  // then duration: 1'>>8. — chord brackets are greedy so steps work inside them too
+  // (<1>>23>8 = root stepped up two, 3rd, 5th).
+  var NOTE_RE = /^([0-9A-Fa-f])([',]*)(<{1,2}|>{1,2})?(\d*)(\.*)(~)?$/;
+  var CHORD_RE = /^<(.+)>(\d*)(\.*)(~)?$/;
   var REST_RE = /^r(\d*)(\.*)(~)?$/;
 
   function parseMarks(markStr){
@@ -602,9 +617,26 @@
     return lane.pc + 12*marks;
   }
 
+  // Scale steps move along the major scale built on the root (position 1), after
+  // octave marks are applied: 1>> = root up two scale notes (C -> E), 4> = 7th up
+  // one (B -> the C above). Every lane pitch is a major-scale note, so ±1/±2 steps
+  // from the nearest chord tone reach any scale degree.
+  var MAJOR_SCALE = [0,2,4,5,7,9,11];
+  function parseSteps(s){ return !s ? 0 : (s[0]==='>' ? s.length : -s.length); }
+  function stepScale(semi, steps){
+    if(!steps) return semi;
+    var oct = Math.floor(semi/12), deg = MAJOR_SCALE.indexOf(semi - oct*12);
+    if(deg < 0) return semi;
+    var d = deg + steps;
+    return (oct + Math.floor(d/7))*12 + MAJOR_SCALE[((d%7)+7)%7];
+  }
+  function makeNote(lane, marks, steps){
+    return {row:lane.row, pc:lane.pc, oct:marks, steps:steps, semi: stepScale(place(lane, marks), steps)};
+  }
+
   function parseChordInner(raw, lanes, isRH, err){
     var out = [];
-    var re = /([0-9A-Fa-f])([',]*)/g;
+    var re = /([0-9A-Fa-f])([',]*)(<{1,2}|>{1,2})?/g;
     var m, consumed = 0;
     while((m = re.exec(raw))){
       consumed += m[0].length;
@@ -613,7 +645,7 @@
         err.push('Unknown ' + (isRH?'right':'left') + '-hand position "' + m[1] + '".');
         continue;
       }
-      out.push({lane:lane, marks:parseMarks(m[2])});
+      out.push({lane:lane, marks:parseMarks(m[2]), steps:parseSteps(m[3])});
     }
     if(consumed !== raw.length){
       err.push('Could not parse chord contents "' + raw + '".');
@@ -635,8 +667,6 @@
       barChecks.push({bar:barIdx, actual:cursor});
       barIdx++; cursor = 0;
     }
-    function place1(lane, marks){ return place(lane, marks); }
-
     function placeToken(raw){
       var mC = CHORD_RE.exec(raw);
       if(mC){
@@ -644,7 +674,7 @@
         var digit = mC[2] ? parseInt(mC[2],10) : curDigit;
         if(mC[2]) curDigit = digit;
         var units = unitsFor(digit, mC[3].length, err);
-        var notes = inner.map(function(p){ return {row:p.lane.row, pc:p.lane.pc, semi: place1(p.lane, p.marks)}; });
+        var notes = inner.map(function(p){ return makeNote(p.lane, p.marks, p.steps); });
         events.push({bar:barIdx, startUnits:cursor, durUnits:units, notes:notes, isRest:false, tie: mC[4]==='~'});
         cursor += units;
         return;
@@ -662,14 +692,14 @@
       if(mN){
         var lane = lanes[isRH ? mN[1] : mN[1].toUpperCase()];
         if(!lane){ err.push('Unknown ' + (isRH?'right':'left') + '-hand position "' + mN[1] + '".'); return; }
-        var digitN = mN[3] ? parseInt(mN[3],10) : curDigit;
-        if(mN[3]) curDigit = digitN;
-        var unitsN = unitsFor(digitN, mN[4].length, err);
-        var semi = place1(lane, parseMarks(mN[2]));
-        events.push({bar:barIdx, startUnits:cursor, durUnits:unitsN, notes:[{row:lane.row,pc:lane.pc,semi:semi}], isRest:false, tie: mN[5]==='~'});
+        var digitN = mN[4] ? parseInt(mN[4],10) : curDigit;
+        if(mN[4]) curDigit = digitN;
+        var unitsN = unitsFor(digitN, mN[5].length, err);
+        events.push({bar:barIdx, startUnits:cursor, durUnits:unitsN, notes:[makeNote(lane, parseMarks(mN[2]), parseSteps(mN[3]))], isRest:false, tie: mN[6]==='~'});
         cursor += unitsN;
         return;
       }
+      if(/<<<|>>>/.test(raw)){ err.push('"' + raw + '": at most two scale steps (<< or >>) per note.'); return; }
       err.push('Could not parse token "' + raw + '".');
     }
 
@@ -707,14 +737,14 @@
             if(isChordOne){
               var mm = CHORD_RE.exec(one);
               parseChordInner(mm[1], lanes, isRH, err).forEach(function(p){
-                notesOne.push({row:p.lane.row, pc:p.lane.pc, semi: place1(p.lane, p.marks)});
+                notesOne.push(makeNote(p.lane, p.marks, p.steps));
               });
             } else {
               var mn = NOTE_RE.exec(one);
               if(!mn){ err.push('Could not parse tuplet member "' + one + '".'); continue; }
               var laneOne = lanes[isRH ? mn[1] : mn[1].toUpperCase()];
               if(!laneOne){ err.push('Unknown position "' + mn[1] + '" in tuplet.'); continue; }
-              notesOne.push({row:laneOne.row, pc:laneOne.pc, semi: place1(laneOne, parseMarks(mn[2]))});
+              notesOne.push(makeNote(laneOne, parseMarks(mn[2]), parseSteps(mn[3])));
             }
             events.push({
               bar:barIdx, startUnits: startUnitsAtTuplet + t*(totalUnits/3), durUnits: totalUnits/3,
@@ -866,6 +896,28 @@
     });
   }
 
+  // One arrow per scale step (up for >, down for <), each as tall as a grid cell.
+  function stepArrows(steps, handClass){
+    var n = Math.abs(steps), up = steps > 0, w = 8, gap = 1, totalW = n*w + (n-1)*gap;
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('class', 'step-arrows ' + handClass);
+    svg.setAttribute('width', totalW);
+    svg.setAttribute('height', CELL);
+    svg.setAttribute('viewBox', '0 0 ' + totalW + ' ' + CELL);
+    var d = '';
+    for(var k=0;k<n;k++){
+      var x = k*(w+gap) + w/2, tip = up ? 3 : CELL-3, tail = up ? CELL-3 : 3, head = up ? 8 : -8;
+      d += 'M' + x + ' ' + tail + 'V' + tip + 'M' + (x-4) + ' ' + (tip+head) + 'L' + x + ' ' + tip + 'L' + (x+4) + ' ' + (tip+head);
+    }
+    ['halo','core'].forEach(function(cls){
+      var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('class', cls);
+      p.setAttribute('d', d);
+      svg.appendChild(p);
+    });
+    return svg;
+  }
+
   function addBlock(strip, e, note, handClass, isRest, barW){
     if(!strip) return;
     var left = e.startUnits*PX + e.bar*barW;
@@ -877,8 +929,12 @@
     el.style.width = Math.max(width-2, 6) + 'px';
     el.style.height = '68%';
     if(!isRest && note){
-      var octave = Math.round((note.semi - note.pc)/12);
-      if(octave !== 0) el.textContent = (octave>0?'+':'') + octave;
+      if(note.oct !== 0){
+        var lbl = document.createElement('span');
+        lbl.textContent = (note.oct>0?'+':'') + note.oct;
+        el.appendChild(lbl);
+      }
+      if(note.steps) el.appendChild(stepArrows(note.steps, handClass));
       el.title = noteName(note.semi);
     }
     strip.appendChild(el);
