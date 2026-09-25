@@ -333,7 +333,7 @@
         <li>This is a deliberate break from LilyPond, which auto-picks the closest octave to the previous note. Here, no marks means the plain, unmoved lane pitch every time &mdash; fully predictable, and never something to double-check.</li>
         <li><code>'</code> shifts a note one octave <i>higher</i> than its lane's default; <code>,</code> shifts it one octave <i>lower</i>. Stack them for more (<code>''</code> = two octaves up). Attach marks directly to a position, before the duration: <code>1'8</code>. A mark is always measured from that fixed default, not from the previous note, so the same token always produces the same octave no matter what comes before it.</li>
         <li>Inside a chord, each position carries its own marks independently &mdash; <code>&lt;12'3&gt;</code> is root at its default octave, 3rd shifted up one, 5th at its default. Nothing about one note in a chord affects another's octave.</li>
-        <li><b>Scale steps:</b> <code>&gt;</code> after a position moves it <i>up</i> one note of the major scale built on the root (position <code>1</code>), <code>&gt;&gt;</code> up two; <code>&lt;</code> / <code>&lt;&lt;</code> move it down one / two. With the root on C: <code>1&gt;&gt;</code> = E, <code>1&gt;</code> = D, <code>3&lt;</code> = F, <code>4&gt;</code> = the C above, <code>1&lt;</code> = the B below. Write steps after any octave marks and before the duration (<code>1'&gt;&gt;8.</code>); they work inside chords too (<code>&lt;1&gt;&gt;23&gt;</code>). The block stays in its lane's row and shows one full-height arrow per step (&uarr; up, &darr; down). At most two steps per note &mdash; every scale note is within two steps of some chord tone.</li>
+        <li><b>Scale steps:</b> <code>&gt;</code> after a position moves it <i>up</i> one note of the major scale built on the root (position <code>1</code>), <code>&gt;&gt;</code> up two; <code>&lt;</code> / <code>&lt;&lt;</code> move it down one / two. With the root on C: <code>1&gt;&gt;</code> = E, <code>1&gt;</code> = D, <code>3&lt;</code> = F, <code>4&gt;</code> = the C above, <code>1&lt;</code> = the B below. Write steps after any octave marks and before the duration (<code>1'&gt;&gt;8.</code>); they work inside chords too (<code>&lt;1&gt;&gt;23&gt;</code>). The block stays in its lane's row, nudged 1/8 of a cell up (or down) per step, and shows one full-height arrow per step (&uarr; up, &darr; down). At most two steps per note &mdash; every scale note is within two steps of some chord tone.</li>
         <li>Hover any block to see its resolved note name (at most one sharp/flat, spelled from whichever natural letter is closest).</li>
       </ul>
     </div>
@@ -890,6 +890,7 @@
           bridge.className = 'tie-bridge ' + handClass;
           bridge.style.left = left + 'px';
           bridge.style.width = width + 'px';
+          if(cur.n.steps) bridge.style.top = 'calc(50% + ' + stepShift(cur.n.steps) + 'px)';
           rows[rowId].appendChild(bridge);
         }
       }
@@ -934,11 +935,21 @@
         lbl.textContent = (note.oct>0?'+':'') + note.oct;
         el.appendChild(lbl);
       }
-      if(note.steps) el.appendChild(stepArrows(note.steps, handClass));
+      if(note.steps){
+        // Block shifts 1/8 cell per scale step (up for >, down for <); the arrows
+        // are counter-shifted so they stay exactly on the grid square.
+        var shift = stepShift(note.steps);
+        el.style.top = 'calc(50% + ' + shift + 'px)';
+        var arrows = stepArrows(note.steps, handClass);
+        arrows.style.transform = 'translateY(' + (-shift) + 'px)';
+        el.appendChild(arrows);
+      }
       el.title = noteName(note.semi);
     }
     strip.appendChild(el);
   }
+
+  function stepShift(steps){ return -steps * CELL / 8; }
 
   // Column size = the coarsest of quarter (8 units) / 8th (4) / 16th (2) that every
   // note start and duration in both hands lands on, so no block ever starts or ends
