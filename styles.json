@@ -35,7 +35,7 @@
     "chordProgression": "Csus2",
     "tags": ["dance"],
     "swing": false,
-    "rh": "\\repeat 4 { <1234>16 r r <1234> }",
+    "rh": "\\repeat 5 { <1234>16 r r} <1234>16",
     "lh": "\\repeat 4 { 116 r 1' r16 }",
     "variationOf": null
   },
@@ -45,9 +45,9 @@
     "chordProgression": "Csus2",
     "tags": ["dance"],
     "swing": false,
-    "rh": "r8 <123>16 r8. <123>16 r16 <123> r8. <123>16 1 1 r",
-    "lh": "116 r8. 116 r16 1 r16 1 r8. 116 r8.",
-    "variationOf": "Dance 1"
+    "rh": "\\repeat 4 {r8 <123>16} r16 1 <23> 1",
+    "lh": "116 r8. 116 r8 116 r8 116 r16 r4",
+    "variationOf": null
   },
   "Basic 1": {
     "tempo": 100,
@@ -55,8 +55,8 @@
     "chordProgression": "Csus2",
     "tags": ["basic"],
     "swing": false,
-    "rh": "<123>16 1 <123> 1 <123> 1 <123> 1 <123> 1 <123> 1 <123> 1 <123> 1",
-    "lh": "116 r4 r8. 116 r4 r8.",
+    "rh": "\\repeat 4 {<23>8 1}",
+    "lh": "11",
     "variationOf": null
   },
   "Basic 2": {
@@ -65,8 +65,8 @@
     "chordProgression": "Csus2",
     "tags": ["basic"],
     "swing": false,
-    "rh": "116 <23> 2 r 1 <23> 2 r 1 <23> 2 r 1 <23> 2 r",
-    "lh": "116 r4 r8. 116 r4 r8.",
+    "rh": "\\repeat 2 {18 2 3 2}",
+    "lh": "11",
     "variationOf": "Basic 1"
   },
   "Basic 3": {
@@ -85,8 +85,8 @@
     "chordProgression": "Csus2",
     "tags": ["basic"],
     "swing": false,
-    "rh": "<12>16 <13> <24> r2 r4 r16",
-    "lh": "116 r4 r8. 116 r4 r8.",
+    "rh": "\\repeat 4 {18 2 3 1 2 4 1 2}",
+    "lh": "11 1 1 1",
     "variationOf": "Basic 1"
   }
 }
