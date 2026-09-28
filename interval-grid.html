@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Interval Grid</title>
 <style>
   :root{
@@ -62,7 +64,38 @@
   .segmented button.active{ background:var(--accent); color:#241a06; }
   .segmented button:not(.active):hover{ background:var(--cell); color:var(--text); }
 
-  .style-panel{ display:flex; flex-direction:column; gap:14px; }
+  .style-panel, .mode-panel{ display:flex; flex-direction:column; gap:14px; }
+  .mode-toggle{ align-self:flex-start; }
+  .auto-controls{ display:flex; flex-wrap:wrap; gap:16px 28px; align-items:flex-end; }
+  .slider-field{ display:flex; flex-direction:column; gap:5px; flex:1; min-width:170px; }
+  .slider-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .slider-head label{
+    font-family:var(--display); font-size:11.5px; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .slider-val{ font-family:var(--display); font-size:13px; font-weight:700; color:var(--accent); }
+  .slider-field input[type="range"]{ width:100%; accent-color:var(--accent); margin:0; }
+  .level-desc{ font-size:11.5px; color:var(--muted-dim); min-height:1.4em; }
+  .icon-btn{
+    display:inline-flex; align-items:center; justify-content:center; width:34px; height:31px; flex:none;
+    background:var(--cell); color:var(--text); border:1px solid var(--cell-border-strong); border-radius:6px; cursor:pointer;
+    margin-bottom:calc(1.4em + 5px); /* line up with the slider tracks, not the descriptions */
+  }
+  .icon-btn:hover{ background:var(--cell-border-strong); }
+  .auto-summary{ font-size:12.5px; color:var(--muted); }
+  .auto-summary b{ color:var(--text); font-weight:600; }
+  .link-btn{
+    background:none; border:none; padding:0; cursor:pointer; font-family:var(--mono); font-size:11.5px;
+    color:var(--accent); text-decoration:underline; text-underline-offset:2px;
+  }
+  .field-inline select:disabled, .field-inline input:disabled{ opacity:.45; cursor:not-allowed; }
+  .collapse-toggle{ display:flex; align-items:center; gap:7px; background:none; border:none; padding:0; cursor:pointer; }
+  .collapse-toggle:hover{ color:var(--text); }
+  .collapse-toggle .chevron{ transition:transform .15s; }
+  .collapse-toggle[aria-expanded="false"] .chevron{ transform:rotate(-90deg); }
+  .collapse-toggle[aria-expanded="false"]{ margin-bottom:0; }
+  .editor-auto-note{ margin-bottom:10px; }
+  .field textarea[readonly]{ opacity:.7; cursor:default; }
   .style-row{ display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end; }
   .field-inline{ display:flex; flex-direction:column; gap:5px; }
   .field-inline label{
@@ -130,6 +163,11 @@
   .bars{ display:flex; flex-direction:column; gap:20px; }
   .bar-block{ display:flex; flex-direction:column; gap:2px; align-items:flex-start; }
 
+  .chord-header{ display:flex; margin-bottom:2px; }
+  .chord-header .spacer{ width:56px; flex:none; }
+  .chord-header .ruler{ position:relative; height:20px; }
+  .chord-label{ position:absolute; top:0; white-space:nowrap; font-family:var(--display); font-size:14px; font-weight:700; color:var(--text); }
+  .chord-label .numeral{ font-size:11px; font-weight:600; color:var(--muted); margin-left:5px; }
   .beat-header{ display:flex; }
   .beat-header .spacer{ width:56px; flex:none; }
   .beat-header .ruler{ position:relative; height:16px; }
@@ -202,6 +240,35 @@
   <header>
     <h1>Interval Grid</h1>  </header>
 
+  <div class="panel mode-panel">
+    <div class="panel-title">Mode</div>
+    <div class="segmented mode-toggle" id="modeToggle" role="group" aria-label="Mode">
+      <button data-mode="auto">Automatic</button>
+      <button data-mode="manual" class="active">Manual</button>
+    </div>
+    <div class="auto-controls" id="autoControls" hidden>
+      <div class="slider-field">
+        <div class="slider-head"><label for="keyLevel">Key</label><span class="slider-val" id="keyLevelVal"></span></div>
+        <input type="range" id="keyLevel" min="1" max="10" value="1">
+        <div class="level-desc" id="keyLevelDesc"></div>
+      </div>
+      <div class="slider-field">
+        <div class="slider-head"><label for="chordLevel">Chords</label><span class="slider-val" id="chordLevelVal"></span></div>
+        <input type="range" id="chordLevel" min="1" max="4" value="1">
+        <div class="level-desc" id="chordLevelDesc"></div>
+      </div>
+      <div class="slider-field">
+        <div class="slider-head"><label for="patternLevel">Patterns</label><span class="slider-val" id="patternLevelVal"></span></div>
+        <input type="range" id="patternLevel" min="1" max="10" value="1">
+        <div class="level-desc" id="patternLevelDesc"></div>
+      </div>
+      <button type="button" class="icon-btn" id="refreshBtn" title="New key, chord progression and pattern" aria-label="Generate a new key, chord progression and pattern">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12.4 1.6v3h-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="auto-summary" id="autoSummary" hidden></div>
+  </div>
+
   <div class="panel style-panel">
     <div class="panel-title">Settings</div>
     <div class="style-row style-name-row">
@@ -236,6 +303,7 @@
         <div class="field-row">
           <input type="number" id="tempoInput" placeholder="e.g. 120" min="20" max="300">
           <span class="unit">BPM</span>
+          <button type="button" class="link-btn" id="resetOverrideBtn" hidden title="Use the style's own tempo and feel">reset</button>
         </div>
       </div>
       <div class="field-inline">
@@ -260,12 +328,18 @@
         <input type="text" id="tagsInput" placeholder="e.g. dance, upbeat">
       </div>
     </div>
-    <div class="hint">Tempo, key, chord progression, and tags are optional and descriptive &mdash; only key currently affects the grid. Tags are comma-separated and can be used to filter the <b>Style Name</b> list above. Pick a <b>Style Name</b> to load a full preset; change anything here or below and it becomes <b>Custom</b>, ready to save as your own.</div>
+    <div class="hint" id="manualSettingsHint">Tempo, chord progression, and tags are optional and descriptive. <b>Key</b> sets the note names shown on the grid, and changing it transposes the chord progression. Tags are comma-separated and can be used to filter the <b>Style Name</b> list above. Pick a <b>Style Name</b> to load a full preset; change anything here or below and it becomes <b>Custom</b>, ready to save as your own.</div>
+    <div class="hint" id="autoSettingsHint" hidden>Automatic mode picks the style, key and chord progression from the <b>Mode</b> sliders. <b>Tempo</b> and <b>Feel</b> can still be changed; your choice sticks across refreshes until you press <b>reset</b> or switch modes.</div>
   </div>
 
 
   <div class="panel">
-    <div class="panel-title">Editor</div>
+    <button type="button" class="panel-title collapse-toggle" id="editorToggle" aria-expanded="true" aria-controls="editorBody">
+      <svg class="chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Editor
+    </button>
+    <div id="editorBody">
+    <div class="hint editor-auto-note" id="editorAutoNote" hidden>Read-only in Automatic mode &mdash; this is the generated style's pattern. Switch to <b>Manual</b> to edit.</div>
     <div class="inputs">
       <div class="field">
         <div class="tag"><span class="dot rh"></span>Right Hand</div>
@@ -280,12 +354,13 @@
         <div class="parse-error" id="lhError"></div>
       </div>
     </div>
+    </div>
   </div>
 
   <div class="panel grid-panel">
     <div class="grid-title">
       <span class="name">Grid</span>
-      <span class="hint2" id="rootReadout">relative-pitch mode &mdash; see notation key, rule 4</span>
+      <span class="hint2" id="rootReadout"></span>
     </div>
     <div class="bars" id="barsWrap"></div>
   </div>
@@ -330,8 +405,9 @@
         <li>This is a deliberate break from LilyPond, which auto-picks the closest octave to the previous note. Here, no marks means the plain, unmoved lane pitch every time &mdash; fully predictable, and never something to double-check.</li>
         <li><code>'</code> shifts a note one octave <i>higher</i> than its lane's default; <code>,</code> shifts it one octave <i>lower</i>. Stack them for more (<code>''</code> = two octaves up). Attach marks directly to a position, before the duration: <code>1'8</code>. A mark is always measured from that fixed default, not from the previous note, so the same token always produces the same octave no matter what comes before it.</li>
         <li>Inside a chord, each position carries its own marks independently &mdash; <code>&lt;12'3&gt;</code> is root at its default octave, 3rd shifted up one, 5th at its default. Nothing about one note in a chord affects another's octave.</li>
-        <li><b>Scale steps:</b> <code>&gt;</code> after a position moves it <i>up</i> one note of the major scale built on the root (position <code>1</code>), <code>&gt;&gt;</code> up two; <code>&lt;</code> / <code>&lt;&lt;</code> move it down one / two. With the root on C: <code>1&gt;&gt;</code> = E, <code>1&gt;</code> = D, <code>3&lt;</code> = F, <code>4&gt;</code> = the C above, <code>1&lt;</code> = the B below. Write steps after any octave marks and before the duration (<code>1'&gt;&gt;8.</code>); they work inside chords too (<code>&lt;1&gt;&gt;23&gt;</code>). The block stays in its lane's row, nudged 1/8 of a cell up (or down) per step, and shows one full-height arrow per step (&uarr; up, &darr; down). At most two steps per note &mdash; every scale note is within two steps of some chord tone.</li>
-        <li>Hover any block to see its resolved note name (at most one sharp/flat, spelled from whichever natural letter is closest).</li>
+        <li><b>Scale steps:</b> <code>&gt;</code> after a position moves it <i>up</i> one note of the key's scale (with the current chord's own tones swapped in &mdash; e.g. G# over E major in A minor), <code>&gt;&gt;</code> up two; <code>&lt;</code> / <code>&lt;&lt;</code> move it down one / two. On a C major chord in C Major: <code>1&gt;&gt;</code> = E, <code>1&gt;</code> = D, <code>3&lt;</code> = F, <code>4&gt;</code> = the C above, <code>1&lt;</code> = the B below. Write steps after any octave marks and before the duration (<code>1'&gt;&gt;8.</code>); they work inside chords too (<code>&lt;1&gt;&gt;23&gt;</code>). The block stays in its lane's row, nudged 1/8 of a cell up (or down) per step, and shows one full-height arrow per step (&uarr; up, &darr; down). At most two steps per note &mdash; every scale note is within two steps of some chord tone.</li>
+        <li>Positions are chord tones, so the actual note depends on the chord: <code>2</code> is the chord's 3rd (E over C, C over Am, E# over C#), and <code>4</code> is its 7th &mdash; the chord's own 7th for a seventh chord, otherwise the key's 7th above the root. In Manual mode every bar uses the key's tonic chord; in Automatic mode each bar uses its own chord.</li>
+        <li>Hover any block to see its resolved note name, spelled for the key (Bb in F Major, E# in C# Minor).</li>
       </ul>
     </div>
 
@@ -348,7 +424,18 @@
       <b>6. Swing &amp; chord quality</b>
       <ul>
         <li>The <b>Swing</b> toggle nudges every straight-8th "and" slightly later for a long&ndash;short feel. It's cosmetic only and doesn't change duration math or the bar check.</li>
-        <li>This tool covers major, minor, and seventh chords: get a minor 3rd/7th with a half-step-down mark relative to the major one &mdash; <span class="assumption">not yet wired up as a dedicated accidental; for now, voice it by ear with the octave marks available.</span> LilyPond's own <code>\chordmode</code> (<code>c:m7</code>, <code>c:maj7</code>&hellip;) auto-expands named chord qualities into pitches, which is worth knowing about, but this tool deliberately keeps manual lane-by-lane voicing since showing <i>how a chord is voiced</i> is the point &mdash; not just which chord it is.</li>
+        <li>Chord quality comes from the chord, not the notation: the same pattern gives a minor 3rd over a minor chord and a flat 7th over a dominant 7th, so one pattern works for every chord in a progression. LilyPond's own <code>\chordmode</code> (<code>c:m7</code>, <code>c:maj7</code>&hellip;) names chords the same way; this tool still keeps lane-by-lane voicing, since showing <i>how a chord is voiced</i> is the point.</li>
+      </ul>
+    </div>
+
+    <div class="legend-section">
+      <b>7. Modes</b>
+      <ul>
+        <li><b>Manual</b> &mdash; pick and edit styles freely. Changing <b>Key</b> transposes the chord progression by Roman numeral (C &ndash; Am &ndash; F &ndash; G in C Major becomes G &ndash; Em &ndash; C &ndash; D in G Major, or Am &ndash; F &ndash; Dm &ndash; E in A Minor).</li>
+        <li><b>Automatic</b> &mdash; the refresh button picks a key, a 4-chord progression and a style's pattern from the three sliders; the pattern repeats once per chord, one chord per bar. Only Tempo and Feel can be changed.</li>
+        <li><b>Key</b> (1&ndash;10) picks a key at exactly that level: 1 C &middot; 2 F, G &middot; 3 Bb, D &middot; 4 Eb, A &middot; 5 E, Ab &middot; 6 Db, B &middot; 7 Gb, F# &middot; 8 Dm, Am, Em &middot; 9 Gm, Cm, Fm &middot; 10 Bm, F#m, C#m, Bbm, Ebm, G#m.</li>
+        <li><b>Chords</b> (1&ndash;4) draws from every level up to the slider and always includes at least one chord from that level: 1 I, IV, V &middot; 2 ii, vi, V7 &middot; 3 iii, vii&deg; &middot; 4 diatonic 7ths plus a dominant 7th on any degree. Progressions start on the tonic. Minor keys use minor-key harmony with a major V (i, iv, V in A Minor = Am, Dm, E).</li>
+        <li><b>Patterns</b> (1&ndash;10) uses any style whose difficulty is at or below the slider, preferring styles at exactly that level. Styles with notation errors or incomplete bars are skipped.</li>
       </ul>
     </div>
   </div>
@@ -362,9 +449,10 @@
   var CELL = 40;    // px — must match .lane-row height in CSS
   var colUnits = 4; // units per grid column: 8=quarter, 4=8th, 2=16th — set by render() via columnUnits()
   var PX = CELL / colUnits; // px per unit — render() sets it so one column = CELL px
-  var NATURALS = [[0,'C'],[2,'D'],[4,'E'],[5,'F'],[7,'G'],[9,'A'],[11,'B']];
-  var RH_LANES = { '1':{row:'C1',pc:0}, '2':{row:'C2',pc:4}, '3':{row:'C3',pc:7}, '4':{row:'C4',pc:11} };
-  var LH_LANES = { '1':{row:'B1',pc:0}, 'F':{row:'BF',pc:7} };
+  // Lanes name a chord tone (0=root, 1=3rd, 2=5th, 3=7th), not a fixed pitch — the
+  // actual note comes from realizeNote() against whatever chord is sounding.
+  var RH_LANES = { '1':{row:'C1',tone:0}, '2':{row:'C2',tone:1}, '3':{row:'C3',tone:2}, '4':{row:'C4',tone:3} };
+  var LH_LANES = { '1':{row:'B1',tone:0}, 'F':{row:'BF',tone:2} };
   var RH_ROW_ORDER = ['C4','C3','C2','C1'];
   var LH_ROW_ORDER = ['BF','B1'];
 
@@ -388,13 +476,41 @@
   var variationSelect = document.getElementById('variationSelect');
   var variationsList = document.getElementById('variationsList');
   var variationsChips = document.getElementById('variationsChips');
+  var modeToggle = document.getElementById('modeToggle');
+  var autoControls = document.getElementById('autoControls');
+  var autoSummary = document.getElementById('autoSummary');
+  var keyLevel = document.getElementById('keyLevel');
+  var chordLevel = document.getElementById('chordLevel');
+  var patternLevel = document.getElementById('patternLevel');
+  var refreshBtn = document.getElementById('refreshBtn');
+  var resetOverrideBtn = document.getElementById('resetOverrideBtn');
+  var manualSettingsHint = document.getElementById('manualSettingsHint');
+  var autoSettingsHint = document.getElementById('autoSettingsHint');
+  var editorToggle = document.getElementById('editorToggle');
+  var editorBody = document.getElementById('editorBody');
+  var editorAutoNote = document.getElementById('editorAutoNote');
+  var rootReadout = document.getElementById('rootReadout');
 
+  // ---- mode ----
+  // 'manual' = the original editor workflow. 'auto' = the sliders pick a style (by
+  // pattern difficulty), a key and a 4-chord progression; only Tempo and Feel stay
+  // editable, and those edits are sticky overrides (autoOverride) across refreshes.
+  var mode = 'manual';
+  var gen = null;                               // {styleName, keyName, chords:[chord objects]}
+  var autoOverride = {tempo:null, swing:null};
+  var prevKeyName = 'C Major';                  // for transposing the progression on a manual key change
+  var loadedDifficulty = 1;                     // difficulty of the style last loaded, carried into a save
+
+  function setSwingUI(on){
+    swing = on;
+    swingToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', (b.dataset.swing==='on')===on); });
+  }
   swingToggle.addEventListener('click', function(e){
     var btn = e.target.closest('button');
     if(!btn) return;
-    swing = btn.dataset.swing === 'on';
-    swingToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b===btn); });
-    markDirty();
+    setSwingUI(btn.dataset.swing === 'on');
+    if(mode === 'auto'){ autoOverride.swing = swing; resetOverrideBtn.hidden = false; }
+    else markDirty();
     render();
   });
   // ---- styles (presets) ----
@@ -404,15 +520,15 @@
   var FALLBACK_STYLES = {
     'Simple Triads': {
       tempo:90, key:'C Major', chordProgression:'C – Am – F – G', swing:false,
-      rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:null
+      rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:null, difficulty:1
     },
     'Swung Feel': {
       tempo:100, key:'C Major', chordProgression:'C – F – C – G', swing:true,
-      rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:'Simple Triads'
+      rh:"<123>4 1 2 3 | 1, 2 3 1", lh:"14 F4 14 F4 | 12 F2", variationOf:'Simple Triads', difficulty:1
     },
     'Slow Ballad': {
       tempo:66, key:'C Major', chordProgression:'C – G – Am – F', swing:false,
-      rh:"<123>4 1 2 3", lh:"14 F4 14 F4", variationOf:null
+      rh:"<123>4 1 2 3", lh:"14 F4 14 F4", variationOf:null, difficulty:1
     }
   };
   var BUILTIN_STYLES = FALLBACK_STYLES;
@@ -515,7 +631,7 @@
     variationsList.hidden = false;
   }
   function markDirty(){
-    if(dirty) return;
+    if(dirty || mode === 'auto') return;
     dirty = true;
     addCustomOption();
     styleNameInput.value = 'Custom';
@@ -526,11 +642,12 @@
     var s = STYLES[name];
     if(!s) return;
     tempoInput.value = s.tempo!=null ? s.tempo : '';
-    keySel.value = s.key || 'C Major';
+    keySel.value = ALL_KEY_NAMES.indexOf(s.key) !== -1 ? s.key : 'C Major';
+    prevKeyName = keySel.value;
     chordProgInput.value = s.chordProgression || '';
     tagsInput.value = (s.tags || []).join(', ');
-    swing = !!s.swing;
-    swingToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', (b.dataset.swing==='on')===swing); });
+    setSwingUI(!!s.swing);
+    loadedDifficulty = s.difficulty || 1;
     rhInput.value = s.rh || '';
     lhInput.value = s.lh || '';
     dirty = false;
@@ -562,7 +679,8 @@
       tags: tagsInput.value.split(',').map(function(t){ return t.trim(); }).filter(Boolean),
       swing: swing,
       rh: rhInput.value, lh: lhInput.value,
-      variationOf: variationSelect.value || null
+      variationOf: variationSelect.value || null,
+      difficulty: loadedDifficulty
     };
     customStyles[name] = style;
     saveCustomStyles();
@@ -576,8 +694,18 @@
     rebuildVariationOptions(name);
     renderVariationsFor(name);
   });
-  tempoInput.addEventListener('input', markDirty);
-  keySel.addEventListener('change', markDirty);
+  tempoInput.addEventListener('input', function(){
+    if(mode === 'auto'){ autoOverride.tempo = tempoInput.value; resetOverrideBtn.hidden = false; return; }
+    markDirty();
+  });
+  // Changing the key re-spells the chord progression in the new key (C – Am – F – G
+  // in C Major -> G – Em – C – D in G Major) and re-names the notes on the grid.
+  keySel.addEventListener('change', function(){
+    chordProgInput.value = transposeProgression(chordProgInput.value, prevKeyName, keySel.value);
+    prevKeyName = keySel.value;
+    markDirty();
+    render();
+  });
   chordProgInput.addEventListener('input', markDirty);
   tagsInput.addEventListener('input', markDirty);
   variationSelect.addEventListener('change', markDirty);
@@ -608,27 +736,13 @@
   }
 
   // No automatic octave placement: a plain position always sounds at its lane's
-  // own default octave. Explicit '/, marks shift it from that fixed default —
-  // never from whatever note happened to come before (unlike LilyPond).
-  function place(lane, marks){
-    return lane.pc + 12*marks;
-  }
-
-  // Scale steps move along the major scale built on the root (position 1), after
-  // octave marks are applied: 1>> = root up two scale notes (C -> E), 4> = 7th up
-  // one (B -> the C above). Every lane pitch is a major-scale note, so ±1/±2 steps
-  // from the nearest chord tone reach any scale degree.
-  var MAJOR_SCALE = [0,2,4,5,7,9,11];
+  // own default octave. Explicit '/, marks (`oct`) shift it from that fixed default —
+  // never from whatever note happened to come before (unlike LilyPond). Scale steps
+  // (> / < , `steps`) are resolved later by realizeNote(), since which scale they
+  // walk depends on the key and chord.
   function parseSteps(s){ return !s ? 0 : (s[0]==='>' ? s.length : -s.length); }
-  function stepScale(semi, steps){
-    if(!steps) return semi;
-    var oct = Math.floor(semi/12), deg = MAJOR_SCALE.indexOf(semi - oct*12);
-    if(deg < 0) return semi;
-    var d = deg + steps;
-    return (oct + Math.floor(d/7))*12 + MAJOR_SCALE[((d%7)+7)%7];
-  }
   function makeNote(lane, marks, steps){
-    return {row:lane.row, pc:lane.pc, oct:marks, steps:steps, semi: stepScale(place(lane, marks), steps)};
+    return {row:lane.row, tone:lane.tone, oct:marks, steps:steps};
   }
 
   function parseChordInner(raw, lanes, isRH, err){
@@ -655,7 +769,7 @@
   function parseHand(str, isRH, err){
     var lanes = isRH ? RH_LANES : LH_LANES;
     var tokens = tokenize(str);
-    var events = [];      // {bar, startUnits, durUnits, notes:[{row,semi}], isRest, tie}
+    var events = [];      // {bar, startUnits, durUnits, notes:[{row,tone,oct,steps}], isRest, tie}
     var barChecks = [];   // {bar, actual}
     var curDigit = 8;
     var cursor = 0, barIdx = 0;
@@ -775,26 +889,206 @@
     return {events:events, barChecks:barChecks};
   }
 
-  function noteName(absSemi){
-    var oct = Math.floor(absSemi/12);
-    var pc = ((absSemi%12)+12)%12;
-    var best=null,bestDist=Infinity;
-    NATURALS.forEach(function(n){
-      var d = pc - n[0];
-      if(Math.abs(d) < Math.abs(bestDist) || (Math.abs(d)===Math.abs(bestDist) && d<0)) { bestDist=d; best=n; }
+  // ---- music theory: keys, chords, Roman numerals, pitch realization ----
+  // Pure functions (no DOM) so they can be tested standalone with the parser.
+  // Notes are spelled by letter (C=0 … B=6) plus accidental, so a key's own
+  // spelling comes out right (Bb not A#, F# major's E#, Gb major's Cb).
+  var LETTERS = ['C','D','E','F','G','A','B'];
+  var NAT_PC = [0,2,4,5,7,9,11];
+  function mod(n, m){ return ((n % m) + m) % m; }
+  function accFor(letter, pc){ return mod(pc - NAT_PC[letter] + 6, 12) - 6; } // -2..+2 in practice
+  function accStr(a){ return a > 0 ? '#'.repeat(a) : a < 0 ? 'b'.repeat(-a) : ''; }
+  function spell(letter, pc){ return LETTERS[letter] + accStr(accFor(letter, pc)); }
+
+  // Key difficulty levels (1-10). Minor keys use minor-key harmony (harmonic-minor V).
+  var KEY_LEVELS = [
+    ['C'], ['F','G'], ['Bb','D'], ['Eb','A'], ['E','Ab'], ['Db','B'], ['Gb','F#'],
+    ['Dm','Am','Em'], ['Gm','Cm','Fm'], ['Bm','F#m','C#m','Bbm','Ebm','G#m']
+  ];
+  function keyNameFromShort(s){ return s.slice(-1)==='m' ? s.slice(0,-1) + ' Minor' : s + ' Major'; }
+  var ALL_KEY_NAMES = [].concat.apply([], KEY_LEVELS).map(keyNameFromShort);
+  function parseKey(name){
+    var m = /^([A-G])([#b]?)\s+(Major|Minor)$/.exec(name || '');
+    if(!m) return parseKey('C Major');
+    var letter = LETTERS.indexOf(m[1]);
+    var pc = mod(NAT_PC[letter] + (m[2]==='#' ? 1 : m[2]==='b' ? -1 : 0), 12);
+    return {name:name, letter:letter, pc:pc, minor: m[3]==='Minor'};
+  }
+  var MAJOR_STEPS = [0,2,4,5,7,9,11], MINOR_STEPS = [0,2,3,5,7,8,10];
+
+  // Chord qualities: semitones of each chord tone, and which scale letter (0-6 above
+  // the root) each tone sits on — sus chords put their "3rd" lane on the 2nd/4th.
+  var QUALITIES = {
+    maj:{iv:[0,4,7], sym:''},        min:{iv:[0,3,7], sym:'m'},
+    dim:{iv:[0,3,6], sym:'°'},       aug:{iv:[0,4,8], sym:'+'},
+    maj7:{iv:[0,4,7,11], sym:'maj7'}, dom7:{iv:[0,4,7,10], sym:'7'},
+    m7:{iv:[0,3,7,10], sym:'m7'},    m7b5:{iv:[0,3,6,10], sym:'ø7'},
+    dim7:{iv:[0,3,6,9], sym:'°7'},
+    sus2:{iv:[0,2,7], sym:'sus2', letters:[0,1,4]}, sus4:{iv:[0,5,7], sym:'sus4', letters:[0,3,4]}
+  };
+  var QUALITY_ALIASES = {
+    '':'maj', 'M':'maj', 'maj':'maj', 'm':'min', 'min':'min', '-':'min',
+    'dim':'dim', '°':'dim', 'o':'dim', 'aug':'aug', '+':'aug',
+    'maj7':'maj7', 'M7':'maj7', 'Δ':'maj7', 'Δ7':'maj7', '7':'dom7', 'dom7':'dom7',
+    'm7':'m7', 'min7':'m7', '-7':'m7', 'm7b5':'m7b5', 'ø':'m7b5', 'ø7':'m7b5',
+    'dim7':'dim7', '°7':'dim7', 'o7':'dim7', 'sus2':'sus2', 'sus4':'sus4', 'sus':'sus4'
+  };
+
+  // Diatonic chords of each mode, by scale degree: root offset from the tonic,
+  // triad quality, seventh quality. Minor uses harmonic-minor V and vii°.
+  var DIATONIC = {
+    major: [[0,'maj','maj7'],[2,'min','m7'],[4,'min','m7'],[5,'maj','maj7'],[7,'maj','dom7'],[9,'min','m7'],[11,'dim','m7b5']],
+    minor: [[0,'min','m7'],[2,'dim','m7b5'],[3,'maj','maj7'],[5,'min','m7'],[7,'maj','dom7'],[8,'maj','maj7'],[11,'dim','dim7']]
+  };
+  function diatonicChord(key, degree, kind){ // kind: 'triad' | 'seventh' | 'dom7'
+    var row = DIATONIC[key.minor ? 'minor' : 'major'][degree];
+    // Secondary dominants sit on the key's natural scale degree (A7, B7, … G7 in A minor).
+    var offset = kind === 'dom7' ? (key.minor ? MINOR_STEPS : MAJOR_STEPS)[degree] : row[0];
+    return {letter: mod(key.letter + degree, 7), pc: mod(key.pc + offset, 12),
+            quality: kind === 'triad' ? row[1] : kind === 'seventh' ? row[2] : 'dom7', degree:degree};
+  }
+  function chordName(ch){ return spell(ch.letter, ch.pc) + (ch.suffix != null ? ch.suffix : QUALITIES[ch.quality].sym); }
+
+  var ROMAN = ['I','II','III','IV','V','VI','VII'];
+  function romanFor(key, ch){
+    var degree = mod(ch.letter - key.letter, 7);
+    var steps = key.minor ? MINOR_STEPS : MAJOR_STEPS;
+    var alt = mod(ch.pc - key.pc - steps[degree] + 6, 12) - 6;
+    // Harmonic-minor raised 7th (vii°) is part of the key, not an alteration.
+    if(key.minor && degree === 6 && alt === 1 && (ch.quality==='dim' || ch.quality==='dim7')) alt = 0;
+    var upper = ['maj','aug','maj7','dom7','sus2','sus4'].indexOf(ch.quality) !== -1;
+    var r = ROMAN[degree];
+    var sym = {dim:'°', aug:'+', maj7:'maj7', dom7:'7', m7:'7', m7b5:'ø7', dim7:'°7', sus2:'sus2', sus4:'sus4'}[ch.quality] || '';
+    return accStr(alt) + (upper ? r : r.toLowerCase()) + sym;
+  }
+
+  // Parse "C – Am – F – G" (or "C Am F G", "C - Am - F - G", "C, Am, F, G") into chord
+  // objects; anything unrecognised is kept as {raw} so it survives a transpose as-is.
+  function parseProgression(text){
+    return (text || '').split(/\s*[–—,|]\s*|\s+-\s+|\s+/).filter(Boolean).map(function(tok){
+      var m = /^([A-G])([#b]?)(.*)$/.exec(tok);
+      if(!m) return {raw:tok};
+      var letter = LETTERS.indexOf(m[1]);
+      var pc = mod(NAT_PC[letter] + (m[2]==='#' ? 1 : m[2]==='b' ? -1 : 0), 12);
+      var q = QUALITY_ALIASES[m[3]];
+      return q ? {letter:letter, pc:pc, quality:q} : {letter:letter, pc:pc, quality:'maj', suffix:m[3]};
     });
-    var acc = '';
-    if(bestDist > 0) acc = '#'.repeat(bestDist);
-    else if(bestDist < 0) acc = 'b'.repeat(-bestDist);
-    return best[1] + acc + (oct!==0 ? (oct>0?'+'+oct:String(oct)) : '');
+  }
+  function formatProgression(chords){ return chords.map(function(c){ return c.raw || chordName(c); }).join(' – '); }
+
+  // Move a chord from one key to another. A chord that is one of the old key's own
+  // diatonic chords keeps its numeral and takes the new key's quality (so I–vi–IV–V
+  // in C Major becomes i–VI–iv–V in A Minor); anything else is transposed literally.
+  function transposeChord(ch, from, to){
+    if(ch.raw) return ch;
+    var degree = mod(ch.letter - from.letter, 7);
+    var row = DIATONIC[from.minor ? 'minor' : 'major'][degree];
+    if(ch.suffix == null && mod(ch.pc - from.pc, 12) === row[0] && (ch.quality === row[1] || ch.quality === row[2])){
+      return diatonicChord(to, degree, ch.quality === row[1] ? 'triad' : 'seventh');
+    }
+    var out = {letter: mod(to.letter + degree, 7), pc: mod(ch.pc - from.pc + to.pc, 12), quality: ch.quality};
+    if(ch.suffix != null) out.suffix = ch.suffix;
+    return out;
+  }
+  function transposeProgression(text, fromName, toName){
+    var from = parseKey(fromName), to = parseKey(toName);
+    return formatProgression(parseProgression(text).map(function(c){ return transposeChord(c, from, to); }));
+  }
+
+  // The 7-note scale a chord's notes (and scale steps) live in: the key's scale
+  // starting on the chord's root letter, with the chord's own tones substituted in
+  // (so E major in A minor walks G#, and D7 in C walks F#). Returns semitones above
+  // the root for each of the 7 letters, plus which letter each lane tone sits on.
+  function chordScale(key, ch){
+    var steps = key.minor ? MINOR_STEPS : MAJOR_STEPS, S = [];
+    for(var i=0;i<7;i++){
+      var d = mod(ch.letter + i - key.letter, 7);
+      S.push(mod(key.pc + steps[d] - ch.pc, 12));
+    }
+    var q = QUALITIES[ch.quality] || QUALITIES.maj;
+    var letters = q.letters || [0,2,4,6];
+    q.iv.forEach(function(semis, t){ S[letters[t]] = semis; });
+    S[0] = 0;
+    return {S:S, toneLetters: letters.length === 4 ? letters : letters.concat([6])};
+  }
+  // Resolve a parsed note against a chord in a key: lane tone -> chord tone, then
+  // octave marks, then scale steps along chordScale(). Returns {semi, name}; `semi`
+  // is semitones above the C at/below the chord root's octave-0 position.
+  function realizeNote(note, key, ch){
+    var cs = chordScale(key, ch);
+    var idx = cs.toneLetters[note.tone] + (note.steps || 0);
+    var octWrap = Math.floor(idx / 7), i = mod(idx, 7);
+    var semi = ch.pc + cs.S[i] + 12*(octWrap + note.oct);
+    var letter = mod(ch.letter + i, 7);
+    var acc = accFor(letter, semi);
+    var octave = Math.floor((semi - acc) / 12);
+    return {semi:semi, name: LETTERS[letter] + accStr(acc) + (octave !== 0 ? (octave>0?'+':'') + octave : '')};
+  }
+
+  // ---- Automatic-mode chord difficulty (levels are cumulative) ----
+  // Each entry is [degree, kind]; kind as in diatonicChord().
+  var CHORD_LEVELS = [
+    [[0,'triad'],[3,'triad'],[4,'triad']],     // 1: I, IV, V
+    [[1,'triad'],[5,'triad'],[4,'seventh']],   // 2: ii, vi, V7
+    [[2,'triad'],[6,'triad']],                 // 3: iii, vii°
+    [0,1,2,3,4,5,6].map(function(d){ return [d,'seventh']; })          // 4: diatonic 7ths
+      .concat([0,1,2,3,5,6].map(function(d){ return [d,'dom7']; }))   //    + secondary dominants
+  ];
+  var CHORD_LEVEL_LABELS = ['I, IV, V', 'ii, vi, V7', 'iii, vii°', 'diatonic 7ths + dominant 7ths'];
+
+  function pick(arr, rand){ return arr[Math.floor((rand || Math.random)() * arr.length)]; }
+  function sameChord(a, b){ return a && b && a.pc === b.pc && a.quality === b.quality; }
+  // 4 chords, one per bar: starts on the tonic, never repeats a chord back-to-back,
+  // and always includes at least one chord from the selected level itself.
+  function generateProgression(key, level, rand){
+    var pool = [], required = [];
+    for(var L=1; L<=level; L++){
+      CHORD_LEVELS[L-1].forEach(function(spec){
+        var ch = diatonicChord(key, spec[0], spec[1]);
+        if(pool.some(function(p){ return sameChord(p, ch); })) return; // e.g. V7 at both level 2 and 4
+        pool.push(ch);
+        if(L === level) required.push(ch);
+      });
+    }
+    var tonics = pool.filter(function(c){ return c.degree === 0 && c.quality !== 'dom7'; });
+    var prog = [pick(tonics, rand)];
+    for(var k=1;k<4;k++){
+      var options = pool.filter(function(c){ return !sameChord(c, prog[k-1]); });
+      prog.push(pick(options, rand));
+    }
+    if(!prog.slice(1).some(function(c){ return required.some(function(r){ return sameChord(r, c); }); })){
+      var slot = 1 + Math.floor((rand || Math.random)() * 3);
+      var fits = required.filter(function(r){ return !sameChord(r, prog[slot-1]) && !sameChord(r, prog[slot+1]); });
+      prog[slot] = pick(fits.length ? fits : required, rand);
+    }
+    return prog;
   }
 
   // One continuous timeline across every displayed bar (no per-bar heading) —
   // bars are told apart only by a thin divider line at each boundary.
-  function buildTimeline(){
+  // chordLabels: optional [{name, numeral}] — one per bar, shown above the beat numbers.
+  function buildTimeline(chordLabels){
     var barW = BASE * PX, totalW = bars * barW;
     var wrap = document.createElement('div');
     wrap.className = 'bar-block';
+
+    if(chordLabels){
+      var chordHeader = document.createElement('div');
+      chordHeader.className = 'chord-header';
+      chordHeader.innerHTML = '<div class="spacer"></div><div class="ruler" style="width:'+totalW+'px"></div>';
+      chordLabels.forEach(function(c, b){
+        var lbl = document.createElement('span');
+        lbl.className = 'chord-label';
+        lbl.style.left = (b*barW + 4) + 'px';
+        lbl.textContent = c.name;
+        var num = document.createElement('span');
+        num.className = 'numeral';
+        num.textContent = c.numeral;
+        lbl.appendChild(num);
+        chordHeader.querySelector('.ruler').appendChild(lbl);
+      });
+      wrap.appendChild(chordHeader);
+    }
 
     var header = document.createElement('div');
     header.className = 'beat-header';
@@ -861,7 +1155,8 @@
 
   function absUnits(e){ return e.bar*BASE + e.startUnits; }
 
-  function renderHandEvents(rows, events, handClass, barW){
+  // nameFor(note, bar) -> the note's spelled name for hover, given that bar's chord.
+  function renderHandEvents(rows, events, handClass, barW, nameFor){
     var byRow = {};
     events.forEach(function(e){
       if(e.isRest){
@@ -872,7 +1167,7 @@
       e.notes.forEach(function(n){
         if(!byRow[n.row]) byRow[n.row] = [];
         byRow[n.row].push({e:e, n:n});
-        addBlock(rows[n.row], e, n, handClass, false, barW);
+        addBlock(rows[n.row], e, n, handClass, false, barW, nameFor(n, e.bar));
       });
     });
     // ties: bridge to the immediately-following same-row event (can cross a bar line)
@@ -916,7 +1211,7 @@
     return svg;
   }
 
-  function addBlock(strip, e, note, handClass, isRest, barW){
+  function addBlock(strip, e, note, handClass, isRest, barW, name){
     if(!strip) return;
     var left = e.startUnits*PX + e.bar*barW;
     var width = e.durUnits*PX;
@@ -941,7 +1236,7 @@
         arrows.style.transform = 'translateY(' + (-shift) + 'px)';
         el.appendChild(arrows);
       }
-      el.title = noteName(note.semi);
+      el.title = name;
     }
     strip.appendChild(el);
   }
@@ -964,20 +1259,47 @@
     return fits(8) ? 8 : fits(4) ? 4 : 2;
   }
 
+  // Automatic mode plays the style once per chord: bar b of the grid takes the
+  // style's bar (b mod styleBars), so a 1- or 2-bar pattern fills all 4 chords.
+  function cycleBars(events, styleBars, n){
+    var out = [];
+    for(var b=0;b<n;b++){
+      events.forEach(function(e){ if(e.bar === b % styleBars) out.push(Object.assign({}, e, {bar:b})); });
+    }
+    return out;
+  }
+
   function render(){
     var rErr = [], lErr = [];
     var rh = parseHand(rhInput.value, true, rErr);
     var lh = parseHand(lhInput.value, false, lErr);
-    bars = Math.max(1, rh.barChecks.length, lh.barChecks.length);
-    colUnits = columnUnits(rh, lh);
+    var key = parseKey(keySel.value);
+    var styleBars = Math.max(1, rh.barChecks.length, lh.barChecks.length);
+    var rhEvents = rh.events, lhEvents = lh.events, chordLabels = null, chordForBar;
+    if(mode === 'auto' && gen){
+      bars = gen.chords.length;
+      rhEvents = cycleBars(rh.events, styleBars, bars);
+      lhEvents = cycleBars(lh.events, styleBars, bars);
+      chordLabels = gen.chords.map(function(c){ return {name:chordName(c), numeral:romanFor(key, c)}; });
+      chordForBar = function(b){ return gen.chords[b]; };
+      rootReadout.textContent = key.name + ' · ' + chordLabels.map(function(c){ return c.numeral; }).join(' – ');
+    } else {
+      bars = styleBars;
+      var tonic = diatonicChord(key, 0, 'triad');
+      chordForBar = function(){ return tonic; };
+      rootReadout.textContent = key.name + ' · positions shown on the ' + chordName(tonic) + ' chord';
+    }
+    var events = {events: rhEvents.concat(lhEvents)};
+    colUnits = columnUnits(events, {events:[]});
     // Square cells: whatever note value a column represents, it is always CELL px
     // wide. Wide grids scroll horizontally rather than shrink.
     PX = CELL / colUnits;
+    function nameFor(n, bar){ return realizeNote(n, key, chordForBar(bar)).name; }
 
     barsWrap.innerHTML = '';
-    var tl = buildTimeline();
-    renderHandEvents(tl.rhRows, rh.events, 'rh', tl.barW);
-    renderHandEvents(tl.lhRows, lh.events, 'lh', tl.barW);
+    var tl = buildTimeline(chordLabels);
+    renderHandEvents(tl.rhRows, rhEvents, 'rh', tl.barW, nameFor);
+    renderHandEvents(tl.lhRows, lhEvents, 'lh', tl.barW, nameFor);
     barsWrap.appendChild(tl.wrap);
 
     var msgs = [];
@@ -999,11 +1321,169 @@
   rhInput.addEventListener('input', function(){ markDirty(); render(); });
   lhInput.addEventListener('input', function(){ markDirty(); render(); });
 
+  // ---- Automatic mode ----
+  // A style can be generated only if both hands parse cleanly and every bar is full.
+  function styleIsPlayable(s){
+    var err = [];
+    var hands = [parseHand(s.rh || '', true, err), parseHand(s.lh || '', false, err)];
+    return !err.length && hands.every(function(h){
+      return h.events.length && h.barChecks.every(function(c){ return c.actual === BASE; });
+    });
+  }
+  // Patterns are cumulative: any playable style at or below the level, preferring
+  // styles at exactly that level when there are any.
+  function stylesForLevel(level){
+    var playable = Object.keys(STYLES).filter(function(n){ return styleIsPlayable(STYLES[n]); });
+    var atOrBelow = playable.filter(function(n){ return (STYLES[n].difficulty || 1) <= level; });
+    var exact = atOrBelow.filter(function(n){ return (STYLES[n].difficulty || 1) === level; });
+    return exact.length ? exact : atOrBelow;
+  }
+  function pickDifferent(options, current){
+    var others = options.filter(function(o){ return o !== current; });
+    return pick(others.length ? others : options);
+  }
+  function generate(){
+    var keyName = keyNameFromShort(pickDifferent(KEY_LEVELS[Number(keyLevel.value)-1], gen && gen.keyShort));
+    var key = parseKey(keyName);
+    var names = stylesForLevel(Number(patternLevel.value));
+    if(!names.length){ autoSummary.textContent = 'No playable styles at this pattern level.'; return; }
+    var styleName = pickDifferent(names, gen && gen.styleName);
+    var chords, tries = 0, prevText = gen ? formatProgression(gen.chords) : '';
+    do { chords = generateProgression(key, Number(chordLevel.value)); } while(formatProgression(chords) === prevText && ++tries < 8);
+    gen = {styleName:styleName, keyName:keyName, keyShort:keyName.replace(' Major','').replace(' Minor','m'), chords:chords};
+    loadGenerated();
+  }
+  function loadGenerated(){
+    var s = STYLES[gen.styleName];
+    tagFilterSelect.value = '';
+    rebuildStyleOptions(gen.styleName);
+    removeCustomOption();
+    styleSelect.value = gen.styleName;
+    rebuildVariationOptions(gen.styleName);
+    variationSelect.value = s.variationOf || '';
+    tempoInput.value = autoOverride.tempo != null ? autoOverride.tempo : (s.tempo != null ? s.tempo : '');
+    setSwingUI(autoOverride.swing != null ? autoOverride.swing : !!s.swing);
+    keySel.value = gen.keyName;
+    prevKeyName = gen.keyName;
+    chordProgInput.value = formatProgression(gen.chords);
+    tagsInput.value = (s.tags || []).join(', ');
+    rhInput.value = s.rh || '';
+    lhInput.value = s.lh || '';
+    dirty = false;
+    styleNameInput.hidden = true;
+    saveStyleBtn.hidden = true;
+    var key = parseKey(gen.keyName);
+    autoSummary.innerHTML = '';
+    [['Key', gen.keyName], ['Chords', gen.chords.map(function(c){ return romanFor(key, c); }).join(' – ')], ['Pattern', gen.styleName]].forEach(function(p, i){
+      if(i) autoSummary.appendChild(document.createTextNode(' · '));
+      autoSummary.appendChild(document.createTextNode(p[0] + ': '));
+      var b = document.createElement('b'); b.textContent = p[1];
+      autoSummary.appendChild(b);
+    });
+    render();
+  }
+
+  function updateLevelLabels(){
+    var k = Number(keyLevel.value), c = Number(chordLevel.value), p = Number(patternLevel.value);
+    document.getElementById('keyLevelVal').textContent = k;
+    document.getElementById('keyLevelDesc').textContent = KEY_LEVELS[k-1].join(', ');
+    document.getElementById('chordLevelVal').textContent = c;
+    document.getElementById('chordLevelDesc').textContent = (c > 1 ? 'up to ' : '') + CHORD_LEVEL_LABELS[c-1];
+    document.getElementById('patternLevelVal').textContent = p;
+    var n = stylesForLevel(p).length;
+    document.getElementById('patternLevelDesc').textContent = n + ' style' + (n===1?'':'s') + ' available';
+  }
+  [keyLevel, chordLevel, patternLevel].forEach(function(el){
+    el.addEventListener('input', function(){ updateLevelLabels(); saveModePrefs(); });
+  });
+  refreshBtn.addEventListener('click', generate);
+  resetOverrideBtn.addEventListener('click', function(){
+    autoOverride = {tempo:null, swing:null};
+    resetOverrideBtn.hidden = true;
+    if(gen) loadGenerated();
+  });
+
+  function setEditorOpen(open){
+    editorBody.hidden = !open;
+    editorToggle.setAttribute('aria-expanded', String(open));
+  }
+  editorToggle.addEventListener('click', function(){ setEditorOpen(editorBody.hidden); });
+
+  function saveModePrefs(){
+    try{
+      localStorage.setItem('intervalGridMode', JSON.stringify({
+        mode:mode, key:Number(keyLevel.value), chords:Number(chordLevel.value), patterns:Number(patternLevel.value)
+      }));
+    } catch(e){}
+  }
+  function loadModePrefs(){
+    try{
+      var p = JSON.parse(localStorage.getItem('intervalGridMode') || 'null');
+      if(!p) return 'manual';
+      if(p.key) keyLevel.value = p.key;
+      if(p.chords) chordLevel.value = p.chords;
+      if(p.patterns) patternLevel.value = p.patterns;
+      return p.mode === 'auto' ? 'auto' : 'manual';
+    } catch(e){ return 'manual'; }
+  }
+
+  // Automatic mode locks everything in Settings except Tempo and Feel, and makes the
+  // Editor read-only (collapsed by default). Switching back to Manual reloads the
+  // style that was showing, as written.
+  function setMode(m){
+    mode = m;
+    var auto = m === 'auto';
+    modeToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.mode === m); });
+    autoControls.hidden = !auto;
+    autoSummary.hidden = !auto;
+    manualSettingsHint.hidden = auto;
+    autoSettingsHint.hidden = !auto;
+    editorAutoNote.hidden = !auto;
+    [tagFilterSelect, styleSelect, variationSelect, keySel, chordProgInput, tagsInput].forEach(function(el){ el.disabled = auto; });
+    rhInput.readOnly = auto;
+    lhInput.readOnly = auto;
+    variationsList.hidden = true;
+    setEditorOpen(!auto);
+    autoOverride = {tempo:null, swing:null};
+    resetOverrideBtn.hidden = true;
+    saveModePrefs();
+    if(auto){
+      updateLevelLabels();
+      generate();
+    } else {
+      var name = gen ? gen.styleName : styleSelect.value;
+      gen = null;
+      rebuildStyleOptions(name);
+      applyStyle(STYLES[name] ? name : Object.keys(STYLES)[0]);
+    }
+  }
+  modeToggle.addEventListener('click', function(e){
+    var btn = e.target.closest('button');
+    if(btn && btn.dataset.mode !== mode) setMode(btn.dataset.mode);
+  });
+
+  function buildKeyOptions(){
+    keySel.innerHTML = '';
+    [['Major', false], ['Minor', true]].forEach(function(g){
+      var group = document.createElement('optgroup');
+      group.label = g[0];
+      ALL_KEY_NAMES.forEach(function(name){
+        if(/Minor$/.test(name) !== g[1]) return;
+        var opt = document.createElement('option');
+        opt.value = name; opt.textContent = name;
+        group.appendChild(opt);
+      });
+      keySel.appendChild(group);
+    });
+  }
+  buildKeyOptions();
+
   // Prefer the version-controlled styles.json (so the built-in library can be edited
   // and diffed outside this file); fall back to the embedded copy if it can't be
   // fetched — e.g. this page opened directly as a file:// URL rather than served.
   function loadBuiltinStyles(){
-    return fetch('styles.json')
+    // no-cache: revalidate with the server so edits to styles.json show up on reload
+    return fetch('styles.json', {cache:'no-cache'})
       .then(function(res){ if(!res.ok) throw new Error('styles.json ' + res.status); return res.json(); })
       .catch(function(){ return FALLBACK_STYLES; });
   }
@@ -1015,6 +1495,9 @@
     rebuildTagFilterOptions();
     rebuildStyleOptions('Simple Triads');
     applyStyle('Simple Triads');
+    var startMode = loadModePrefs();
+    updateLevelLabels();
+    if(startMode === 'auto') setMode('auto');
   });
 })();
 </script>
