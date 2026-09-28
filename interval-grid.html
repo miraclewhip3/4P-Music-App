@@ -29,13 +29,13 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--mono);
-    padding: 28px 16px 40px;
+    padding: 18px 16px 32px;
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:22px;
+    gap:14px;
   }
-  .wrap{ width:100%; max-width:960px; display:flex; flex-direction:column; gap:22px; }
+  .wrap{ width:100%; max-width:960px; display:flex; flex-direction:column; gap:12px; }
 
   header{ display:flex; flex-direction:column; gap:4px; }
   h1{
@@ -51,7 +51,7 @@
     background:var(--panel);
     border:1px solid var(--panel-border);
     border-radius:10px;
-    padding:18px 20px;
+    padding:13px 18px;
   }
 
   .segmented{ display:flex; border:1px solid var(--cell-border-strong); border-radius:6px; overflow:hidden; }
@@ -64,9 +64,9 @@
   .segmented button.active{ background:var(--accent); color:#241a06; }
   .segmented button:not(.active):hover{ background:var(--cell); color:var(--text); }
 
-  .style-panel, .mode-panel{ display:flex; flex-direction:column; gap:14px; }
+  .style-panel, .mode-panel{ display:flex; flex-direction:column; gap:10px; }
   .mode-toggle{ align-self:flex-start; }
-  .auto-controls{ display:flex; flex-wrap:wrap; gap:16px 28px; align-items:flex-end; }
+  .auto-controls{ display:flex; flex-wrap:wrap; gap:12px 28px; align-items:flex-end; }
   .slider-field{ display:flex; flex-direction:column; gap:5px; flex:1; min-width:170px; }
   .slider-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
   .slider-head label{
@@ -154,9 +154,9 @@
   .parse-error.show{ display:block; }
 
   .grid-panel{ overflow-x:auto; }
-  .grid-title{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
+  .grid-title{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; }
   .grid-title .name, .panel-title{ font-family:var(--display); font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
-  .panel-title{ margin-bottom:12px; }
+  .panel-title{ margin-bottom:8px; }
   .style-panel .panel-title{ margin-bottom:0; } /* flex gap already spaces it */
   .grid-title .hint2{ font-family:var(--mono); font-size:11.5px; color:var(--muted-dim); }
 
@@ -215,6 +215,34 @@
 
   .bar-check{ font-family:var(--mono); font-size:11px; color:var(--warn); margin-top:3px; }
 
+  .tips-head{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:10px; }
+  .tips-head .panel-title{ margin:0; }
+  .ghost-btn{
+    font-family:var(--mono); font-size:12px; background:var(--cell); color:var(--text);
+    border:1px solid var(--cell-border-strong); border-radius:6px; padding:5px 11px; cursor:pointer;
+  }
+  .ghost-btn:hover{ background:var(--cell-border-strong); }
+  .tip-filters{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+  .filter-chip{
+    font-family:var(--mono); font-size:12px; background:var(--cell); color:var(--muted);
+    border:1px solid var(--cell-border-strong); border-radius:99px; padding:4px 11px; cursor:pointer;
+  }
+  .filter-chip:hover{ color:var(--text); }
+  .filter-chip.active{ background:var(--accent); color:#241a06; border-color:var(--accent); }
+  .tip-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:10px; }
+  .tip-card{
+    background:var(--cell); border:1px solid var(--cell-border); border-radius:8px; padding:12px 14px;
+    display:flex; flex-direction:column; gap:7px; transition:border-color .3s;
+  }
+  .tip-card.highlight{ border-color:var(--accent); }
+  .tip-card .top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .tip-card h3{ margin:0; font-family:var(--display); font-size:14.5px; font-weight:600; color:var(--text); text-wrap:balance; }
+  .tip-card .diff{ font-family:var(--display); font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--accent); white-space:nowrap; }
+  .tip-card .ex{
+    font-family:var(--mono); font-size:12.5px; color:var(--text); background:var(--panel);
+    border:1px solid var(--cell-border); border-radius:5px; padding:4px 8px; align-self:flex-start;
+  }
+  .tip-card p{ margin:0; font-size:12.5px; color:var(--muted); line-height:1.55; }
   .legend{ display:flex; flex-direction:column; gap:16px; }
   .legend .name{ font-family:var(--display); font-size:12.5px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
   .legend-section{ font-size:13px; color:var(--muted); line-height:1.6; border-top:1px solid var(--panel-border); padding-top:14px; }
@@ -328,8 +356,6 @@
         <input type="text" id="tagsInput" placeholder="e.g. dance, upbeat">
       </div>
     </div>
-    <div class="hint" id="manualSettingsHint">Tempo, chord progression, and tags are optional and descriptive. <b>Key</b> sets the note names shown on the grid, and changing it transposes the chord progression. Tags are comma-separated and can be used to filter the <b>Style Name</b> list above. Pick a <b>Style Name</b> to load a full preset; change anything here or below and it becomes <b>Custom</b>, ready to save as your own.</div>
-    <div class="hint" id="autoSettingsHint" hidden>Automatic mode picks the style, key and chord progression from the <b>Mode</b> sliders. <b>Tempo</b> and <b>Feel</b> can still be changed; your choice sticks across refreshes until you press <b>reset</b> or switch modes.</div>
   </div>
 
 
@@ -344,13 +370,11 @@
       <div class="field">
         <div class="tag"><span class="dot rh"></span>Right Hand</div>
         <textarea id="rhInput" spellcheck="false"></textarea>
-        <div class="hint">e.g. <code>&lt;123&gt;4 1'8 1'8</code> &middot; duration persists till you change it &middot; bars separated by <code>|</code></div>
         <div class="parse-error" id="rhError"></div>
       </div>
       <div class="field">
         <div class="tag"><span class="dot lh"></span>Left Hand</div>
         <textarea id="lhInput" spellcheck="false"></textarea>
-        <div class="hint">e.g. <code>1,4 F4</code> &middot; positions are <code>1</code>=root, <code>F</code>=fifth</div>
         <div class="parse-error" id="lhError"></div>
       </div>
     </div>
@@ -363,6 +387,15 @@
       <span class="hint2" id="rootReadout"></span>
     </div>
     <div class="bars" id="barsWrap"></div>
+  </div>
+
+  <div class="panel tips-panel">
+    <div class="tips-head">
+      <span class="panel-title">Tips &amp; tricks</span>
+      <button type="button" class="ghost-btn" id="surpriseTipBtn">🎲 Surprise me</button>
+    </div>
+    <div class="tip-filters" id="tipFilters"></div>
+    <div class="tip-grid" id="tipGrid"></div>
   </div>
 
   <div class="panel legend">
@@ -484,8 +517,6 @@
   var patternLevel = document.getElementById('patternLevel');
   var refreshBtn = document.getElementById('refreshBtn');
   var resetOverrideBtn = document.getElementById('resetOverrideBtn');
-  var manualSettingsHint = document.getElementById('manualSettingsHint');
-  var autoSettingsHint = document.getElementById('autoSettingsHint');
   var editorToggle = document.getElementById('editorToggle');
   var editorBody = document.getElementById('editorBody');
   var editorAutoNote = document.getElementById('editorAutoNote');
@@ -1436,8 +1467,6 @@
     modeToggle.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.mode === m); });
     autoControls.hidden = !auto;
     autoSummary.hidden = !auto;
-    manualSettingsHint.hidden = auto;
-    autoSettingsHint.hidden = !auto;
     editorAutoNote.hidden = !auto;
     [tagFilterSelect, styleSelect, variationSelect, keySel, chordProgInput, tagsInput].forEach(function(el){ el.disabled = auto; });
     rhInput.readOnly = auto;
@@ -1477,6 +1506,95 @@
     });
   }
   buildKeyOptions();
+
+  // ---- Tips & tricks ----
+  // Carried over from the "Pat's Practical Piano Patterns" artifact (its Licks & tips
+  // panel); a few lines that pointed at that app's own controls were reworded.
+  var TIPS = [
+    {cat:'Turnaround', diff:'Beginner', title:'The ii–V–I Turnaround', ex:'ii7 – V7 – Imaj7',
+      body:'The backbone of jazz and pop harmony: a minor seventh falling a fifth into a dominant seventh, resolving to the tonic. Loop it in every key until your fingers find it without looking.'},
+    {cat:'Turnaround', diff:'Beginner', title:'50s Doo-Wop Changes', ex:'I – vi – IV – V',
+      body:'Heard in hundreds of pop and rock songs. Try it with plain quarter-note chords first, then sing over it.'},
+    {cat:'Turnaround', diff:'Intermediate', title:'Circle-of-Fifths Vamp', ex:'vi – ii – V – I',
+      body:'Each chord root falls a perfect fifth into the next, tracing the circle of fifths. Great for practicing smooth voice leading between chord tones rather than jumping positions.'},
+    {cat:'Harmony', diff:'Intermediate', title:'Secondary Dominant (V/V)', ex:'I – V7/V – V',
+      body:'Borrow the dominant of your dominant. In C major, that means slipping a D7 in front of G — the D7 doesn’t belong to the key, but it pulls hard toward G and adds instant tension.'},
+    {cat:'Passing chord', diff:'Intermediate', title:'Passing Diminished', ex:'I – #I° – ii',
+      body:'A chromatic diminished chord bridges the gap between the I and ii chords by half-step motion in the bass. Classic in ragtime and early jazz comping.'},
+    {cat:'Harmony', diff:'Intermediate', title:'Borrowed iv (Minor Plagal)', ex:'I – iv – I',
+      body:'Borrow the minor four chord from the parallel minor key. It gives a wistful, almost cinematic color before resolving home — think of it as a darker cousin of the plain IV chord.'},
+    {cat:'Harmony', diff:'Advanced', title:'Tritone Substitution', ex:'ii – bII7 – I',
+      body:'Swap a V7 for the dominant seventh a tritone away (they share the same guide tones). Replacing G7 with Db7 before resolving to C keeps the pull to the tonic but adds heavy chromatic color.'},
+    {cat:'Voicing', diff:'Beginner', title:'Add a 9th for Color', ex:'Cadd9 instead of C',
+      body:'Adding the 9th (the note a whole step above the octave) to a plain major or minor chord instantly sounds more modern without changing the chord’s function.'},
+    {cat:'Voicing', diff:'Beginner', title:'Suspend Before You Resolve', ex:'Gsus4 → G',
+      body:'Play the sus4 voicing right before the "real" chord and let the 4th resolve down to the 3rd. It’s a tiny, satisfying piece of voice leading you can drop into almost any pattern.'},
+    {cat:'Rhythm', diff:'Intermediate', title:'Pedal Point Groove', ex:'I – IV/I – V/I – I',
+      body:'Keep the bass note (or a droning low string) locked on the tonic while the chords above it change. Great for building tension that only releases when the bass finally moves.'},
+    {cat:'Rhythm', diff:'Beginner', title:'Anticipate the Downbeat', ex:'&4 → 1',
+      body:'Strike the new chord on the "and" of the last beat instead of squarely on beat one. That little rhythmic push is most of what makes a pattern feel like a real song instead of a metronome.'},
+    {cat:'Technique', diff:'Intermediate', title:'Walking Bass Between Chords', ex:'C – (D–E) – F',
+      body:'Fill the gap between two chord roots with passing notes from the scale, played as quarter notes in the bass. It turns a static progression into forward motion.'},
+    {cat:'Ear training', diff:'Beginner', title:'Call and Response', ex:'Play 2 bars, rest 2 bars',
+      body:'Play a short chordal phrase, then leave silence of equal length and try to sing or hum back what you just heard before you play the next phrase. Builds the link between your ears and your hands.'},
+    {cat:'Passing chord', diff:'Advanced', title:'Chromatic Approach Chords', ex:'bII – ii  or  #IV° – V',
+      body:'Approach any diatonic chord from a half-step above or below using the same chord quality. It’s a quick way to add motion without leaving the overall key center for long.'},
+    {cat:'Voicing', diff:'Beginner', title:'Add6 Instead of Maj7', ex:'C6 instead of Cmaj7',
+      body:'Swap the major seventh for the major sixth. It keeps the same lush, "resolved" color but reads a little brighter and works well as a final chord in a progression.'},
+    {cat:'Voicing', diff:'Intermediate', title:'Descending Slash-Chord Bass', ex:'I – V/vii – vi – V/vi',
+      body:'Keep the upper chord voicing mostly still while walking the bass note down step by step underneath it. Listen for how much movement you get from changing only the lowest note.'},
+    {cat:'Harmony', diff:'Advanced', title:'Backdoor Dominant', ex:'bVII7 – I',
+      body:'Instead of resolving V7 to I, approach the tonic from a whole step above using a dominant seventh built on the flat-7 scale degree. Common in jazz ballads for a softer landing on the tonic.'},
+    {cat:'Rhythm', diff:'Intermediate', title:'Reggae Skank', ex:'r8 <123> r <123> r <123> r <123>',
+      body:'Play short, muted chord stabs strictly on the off-beats and leave the downbeats empty. The example above is the right-hand pattern for it in this app’s notation.'},
+    {cat:'Harmony', diff:'Intermediate', title:'Modal Vamp: Dorian', ex:'i – IV (both from Dorian)',
+      body:'In a minor key, vamp between the i chord and a major IV chord — the natural (not flattened) 6th degree is what gives Dorian its brighter, less melancholy minor color versus Aeolian.'},
+    {cat:'Harmony', diff:'Advanced', title:'Modal Vamp: Mixolydian', ex:'I – bVII – IV – I',
+      body:'Mixolydian is a major scale with a flattened 7th degree. Vamping I to bVII (rather than resolving up through vii°) is the sound of a huge swath of rock and jam-band music.'}
+  ];
+  var tipFilters = document.getElementById('tipFilters');
+  var tipGrid = document.getElementById('tipGrid');
+  var tipCategory = 'All';
+  function el(tag, cls, text){ var e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+  function renderTips(){
+    tipFilters.innerHTML = '';
+    ['All'].concat(TIPS.map(function(t){ return t.cat; }).filter(function(c, i, a){ return a.indexOf(c) === i; })).forEach(function(cat){
+      var chip = el('button', 'filter-chip' + (cat === tipCategory ? ' active' : ''), cat);
+      chip.type = 'button';
+      chip.dataset.cat = cat;
+      tipFilters.appendChild(chip);
+    });
+    tipGrid.innerHTML = '';
+    TIPS.filter(function(t){ return tipCategory === 'All' || t.cat === tipCategory; }).forEach(function(t){
+      var card = el('div', 'tip-card');
+      card.dataset.title = t.title;
+      var top = el('div', 'top');
+      top.appendChild(el('h3', null, t.title));
+      top.appendChild(el('span', 'diff', t.diff));
+      card.appendChild(top);
+      card.appendChild(el('div', 'ex', t.ex));
+      card.appendChild(el('p', null, t.body));
+      tipGrid.appendChild(card);
+    });
+  }
+  tipFilters.addEventListener('click', function(e){
+    var chip = e.target.closest('.filter-chip');
+    if(!chip) return;
+    tipCategory = chip.dataset.cat;
+    renderTips();
+  });
+  document.getElementById('surpriseTipBtn').addEventListener('click', function(){
+    var t = pick(TIPS);
+    tipCategory = 'All';
+    renderTips();
+    var card = [].find.call(tipGrid.children, function(c){ return c.dataset.title === t.title; });
+    if(!card) return;
+    var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    card.scrollIntoView({behavior: still ? 'auto' : 'smooth', block:'center'});
+    card.classList.add('highlight');
+    setTimeout(function(){ card.classList.remove('highlight'); }, 1600);
+  });
+  renderTips();
 
   // Prefer the version-controlled styles.json (so the built-in library can be edited
   // and diffed outside this file); fall back to the embedded copy if it can't be
