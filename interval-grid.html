@@ -122,7 +122,9 @@
 
   .grid-panel{ overflow-x:auto; }
   .grid-title{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px; }
-  .grid-title .name{ font-family:var(--display); font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .grid-title .name, .panel-title{ font-family:var(--display); font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .panel-title{ margin-bottom:12px; }
+  .style-panel .panel-title{ margin-bottom:0; } /* flex gap already spaces it */
   .grid-title .hint2{ font-family:var(--mono); font-size:11.5px; color:var(--muted-dim); }
 
   .bars{ display:flex; flex-direction:column; gap:20px; }
@@ -201,6 +203,7 @@
     <h1>Interval Grid</h1>  </header>
 
   <div class="panel style-panel">
+    <div class="panel-title">Settings</div>
     <div class="style-row style-name-row">
       <div class="field-inline tag-filter-field">
         <label for="tagFilterSelect">Filter by Tag</label>
@@ -262,6 +265,7 @@
 
 
   <div class="panel">
+    <div class="panel-title">Editor</div>
     <div class="inputs">
       <div class="field">
         <div class="tag"><span class="dot rh"></span>Right Hand</div>
